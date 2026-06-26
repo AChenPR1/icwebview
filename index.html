@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遊戲圖示圖庫</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f14;
+    --bg2: #17171e;
+    --bg3: #1e1e28;
+    --bg4: #252532;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8e8f0;
+    --text2: #9090a8;
+    --text3: #5a5a72;
+    --accent: #7c6af7;
+    --accent2: #5b4fd4;
+    --accent-glow: rgba(124,106,247,0.15);
+    --accent-bg: rgba(124,106,247,0.1);
+    --danger: #e05c5c;
+    --success: #4caf82;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+
+  /* ── Layout ── */
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 20px; height: 52px; min-height: 52px;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .topbar-logo { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+  .topbar-logo svg { opacity: 0.8; }
+  .topbar-sep { flex: 1; }
+  .topbar-search {
+    position: relative; display: flex; align-items: center;
+  }
+  .topbar-search input {
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); font-size: 13px; padding: 6px 12px 6px 32px;
+    border-radius: 20px; width: 220px; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .topbar-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .topbar-search input::placeholder { color: var(--text3); }
+  .topbar-search .icon { position: absolute; left: 10px; color: var(--text3); pointer-events: none; }
+
+  .body { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 210px; min-width: 210px;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    color: var(--text3); text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .add-folder-btn {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; line-height: 1; transition: background 0.12s, color 0.12s;
+  }
+  .add-folder-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+  .folder-list { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
+  .folder-list::-webkit-scrollbar { width: 4px; }
+  .folder-list::-webkit-scrollbar-track { background: transparent; }
+  .folder-list::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+
+  .folder-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: var(--radius); cursor: pointer;
+    font-size: 13px; color: var(--text2); transition: background 0.1s, color 0.1s;
+    user-select: none; position: relative;
+  }
+  .folder-item:hover { background: var(--bg3); color: var(--text); }
+  .folder-item.active { background: var(--accent-bg); color: var(--accent); }
+  .folder-item.active .folder-icon { color: var(--accent); }
+  .folder-icon { font-size: 15px; flex-shrink: 0; opacity: 0.7; }
+  .folder-item.active .folder-icon { opacity: 1; }
+  .folder-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-count {
+    font-size: 11px; background: var(--bg4); color: var(--text3);
+    padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
+  }
+  .folder-item.active .folder-count { background: var(--accent2); color: #fff; }
+  .folder-delete {
+    display: none; position: absolute; right: 6px;
+    width: 18px; height: 18px; border-radius: 4px;
+    background: rgba(224,92,92,0.15); color: var(--danger); border: none;
+    cursor: pointer; font-size: 12px; align-items: center; justify-content: center;
+  }
+  .folder-item:hover .folder-delete { display: flex; }
+  .folder-item:hover .folder-count { display: none; }
+
+  .sidebar-footer {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text3); line-height: 1.5;
+  }
+  .sidebar-footer a { color: var(--accent); text-decoration: none; }
+  .sidebar-footer a:hover { text-decoration: underline; }
+
+  /* ── Main ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .main-header {
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg);
+  }
+  .main-title { font-size: 15px; font-weight: 600; flex: 1; }
+  .main-sub { font-size: 12px; color: var(--text3); }
+  .view-toggle { display: flex; gap: 2px; }
+  .view-btn {
+    width: 30px; height: 30px; border-radius: 6px;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.12s;
+  }
+  .view-btn.active { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+  .view-btn:hover:not(.active) { color: var(--text2); }
+
+  .grid-area { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .grid-area::-webkit-scrollbar { width: 6px; }
+  .grid-area::-webkit-scrollbar-track { background: transparent; }
+  .grid-area::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+
+  /* ── Icon Grid ── */
+  .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 100px), 1fr)); gap: var(--grid-gap, 10px); }
+  .icon-grid.list-view { grid-template-columns: 1fr; gap: 3px; }
+
+  .icon-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--card-pad, 10px) 8px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    cursor: pointer; transition: border-color 0.13s, background 0.13s, transform 0.1s;
+    position: relative; overflow: hidden;
+  }
+  .icon-card:hover { border-color: var(--accent); background: var(--bg3); transform: translateY(-1px); }
+
+  .icon-grid.list-view .icon-card {
+    flex-direction: row; padding: 7px 12px; border-radius: var(--radius);
+    gap: 12px; transform: none;
+  }
+
+  .icon-thumb {
+    width: var(--thumb-size, 72px); height: var(--thumb-size, 72px); border-radius: 8px;
+    background: var(--bg3); display: flex; align-items: center; justify-content: center;
+    overflow: hidden; flex-shrink: 0; position: relative;
+  }
+  .icon-grid.list-view .icon-thumb { width: 40px; height: 40px; border-radius: 6px; }
+
+  .icon-thumb img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .icon-thumb .placeholder-icon { color: var(--text3); font-size: 22px; }
+  .icon-grid.list-view .icon-thumb .placeholder-icon { font-size: 16px; }
+
+  .icon-name {
+    font-size: 11px; color: var(--text2); text-align: center;
+    line-height: 1.3; word-break: break-all;
+    max-width: 100%; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .icon-grid.list-view .icon-name { font-size: 13px; text-align: left; flex: 1; -webkit-line-clamp: 1; }
+
+  .icon-size { font-size: 10px; color: var(--text3); display: none; }
+  .icon-grid.list-view .icon-size { display: block; font-size: 11px; margin-left: auto; }
+
+  /* ── States ── */
+  .state-empty, .state-loading, .state-error {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 12px; color: var(--text3);
+  }
+  .state-empty svg, .state-loading svg, .state-error svg { opacity: 0.25; }
+  .state-empty p, .state-loading p, .state-error p { font-size: 13px; }
+  .state-error p { color: var(--danger); opacity: 0.8; }
+  .state-error .err-detail { font-size: 11px; color: var(--text3); max-width: 300px; text-align: center; line-height: 1.5; }
+
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Lightbox ── */
+  .lightbox-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .lightbox {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 16px; padding: 20px; max-width: 480px; width: calc(100% - 40px);
+    position: relative; animation: scaleIn 0.15s ease;
+  }
+  @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .lightbox-close {
+    position: absolute; top: 12px; right: 12px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text2); cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s; z-index: 1;
+  }
+  .lightbox-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .lightbox-img-wrap {
+    background: var(--bg3); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px; max-height: 380px; overflow: hidden; margin-bottom: 14px;
+  }
+  .lightbox-img-wrap img { max-width: 100%; max-height: 380px; object-fit: contain; image-rendering: pixelated; }
+
+  .lightbox-info { display: flex; flex-direction: column; gap: 6px; }
+  .lightbox-name { font-size: 14px; font-weight: 500; color: var(--text); word-break: break-all; }
+  .lightbox-meta { display: flex; gap: 12px; }
+  .lightbox-tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    background: var(--bg4); color: var(--text3);
+  }
+  .lightbox-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .lb-btn {
+    flex: 1; padding: 7px 12px; border-radius: var(--radius);
+    font-size: 12px; cursor: pointer; border: 1px solid var(--border2);
+    background: var(--bg3); color: var(--text2);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .lb-btn:hover { background: var(--bg4); color: var(--text); }
+  .lb-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lb-btn.primary:hover { background: var(--accent2); }
+
+  /* ── Add Folder Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 14px; padding: 22px; width: 360px;
+  }
+  .modal h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .modal label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; }
+  .modal input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); font-size: 13px; padding: 8px 12px;
+    border-radius: var(--radius); outline: none; margin-bottom: 12px;
+    transition: border-color 0.13s;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal input::placeholder { color: var(--text3); }
+  .modal-hint { font-size: 11px; color: var(--text3); margin-top: -8px; margin-bottom: 12px; line-height: 1.5; }
+  .modal-hint a { color: var(--accent); text-decoration: none; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .modal-btn {
+    flex: 1; padding: 8px; border-radius: var(--radius); font-size: 13px;
+    cursor: pointer; border: 1px solid var(--border2);
+    background: var(--bg3); color: var(--text2); transition: all 0.12s;
+  }
+  .modal-btn:hover { background: var(--bg4); color: var(--text); }
+  .modal-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .modal-btn.primary:hover { background: var(--accent2); }
+
+  /* ── No selection ── */
+  .no-select {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 10px; color: var(--text3); text-align: center;
+  }
+  .no-select .big-icon { font-size: 48px; opacity: 0.12; margin-bottom: 4px; }
+  .no-select p { font-size: 13px; }
+  .no-select .sub { font-size: 12px; color: var(--text3); opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="8" height="8" rx="2" fill="#7c6af7"/>
+        <rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/>
+        <rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/>
+        <rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/>
+      </svg>
+      遊戲圖示圖庫
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-search">
+      <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="搜尋圖示名稱..." oninput="filterIcons()">
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        資料夾
+        <button class="add-folder-btn" onclick="showAddModal()" title="新增資料夾">＋</button>
+      </div>
+      <div class="folder-list" id="folderList">
+        <div class="state-loading" style="height:120px">
+          <div class="spinner"></div>
+          <p>載入中...</p>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        圖片來源：Google Drive<br>
+        <a href="#" onclick="showAddModal();return false">＋ 新增資料夾</a>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <div class="main-header">
+        <div>
+          <div class="main-title" id="mainTitle">選擇一個資料夾</div>
+          <div class="main-sub" id="mainSub"></div>
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active" id="gridBtn" onclick="setView('grid')" title="格狀檢視">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="10" y="0" width="6" height="6" rx="1"/><rect x="0" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>
+          </button>
+          <button class="view-btn" id="listBtn" onclick="setView('list')" title="列表檢視">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="16" height="3" rx="1"/><rect x="0" y="6" width="16" height="3" rx="1"/><rect x="0" y="12" width="16" height="3" rx="1"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3);flex-shrink:0"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <input type="range" id="thumbSizeSlider" min="56" max="180" value="72" step="4"
+            style="width:90px;cursor:pointer;accent-color:var(--accent)"
+            oninput="updateThumbSize(this.value)" title="調整縮圖大小">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3);flex-shrink:0"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+        </div>
+      </div>
+
+      <div class="grid-area" id="gridArea">
+        <div class="no-select">
+          <div class="big-icon">🗂️</div>
+          <p>從左側選擇一個資料夾</p>
+          <p class="sub">或點選「＋」新增資料夾</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightboxOverlay" style="display:none" onclick="if(event.target===this)closeLightbox()">
+  <div class="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <div class="lightbox-img-wrap">
+      <img id="lbImg" src="" alt="">
+    </div>
+    <div class="lightbox-info">
+      <div class="lightbox-name" id="lbName"></div>
+      <div class="lightbox-meta">
+        <span class="lightbox-tag" id="lbExt"></span>
+        <span class="lightbox-tag" id="lbFolder"></span>
+      </div>
+      <div class="lightbox-actions">
+        <button class="lb-btn" onclick="copyFileName()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          複製檔名
+        </button>
+        <button class="lb-btn primary" id="lbOpenBtn" onclick="openInDrive()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          在 Drive 開啟
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Folder Modal -->
+<div class="modal-overlay" id="addModal" style="display:none">
+  <div class="modal">
+    <h3>新增資料夾</h3>
+    <label>資料夾名稱</label>
+    <input type="text" id="newFolderName" placeholder="例如：武器、道具、技能...">
+    <label>Google Drive 資料夾 ID</label>
+    <input type="text" id="newFolderId" placeholder="例如：1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB">
+    <p class="modal-hint">
+      從 Drive 資料夾網址中取得 ID：<br>
+      drive.google.com/drive/folders/<strong style="color:var(--accent)">這段就是 ID</strong>
+    </p>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="hideAddModal()">取消</button>
+      <button class="modal-btn primary" onclick="addFolder()">新增並載入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY    = 'AIzaSyBuI7-G-XrR1fR0Md9c9XPXyZvh8SgBTtU';
+const GAPI       = 'https://www.googleapis.com/drive/v3';
+const ROOT_FOLDERS = [
+  { id: '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB', name: 'Idel Casino' },
+];
+
+let categories    = [];
+let extraFolders  = [];
+let currentFolder = null;
+let currentFiles  = [];
+let viewMode      = 'grid';
+let lbCurrentFile = null;
+// Store file objects by id for onclick lookup (avoids JSON-in-attribute issues)
+const fileMap = {};
+
+function saveExtra() { try { localStorage.setItem('icon_gallery_extra', JSON.stringify(extraFolders)); } catch(e){} }
+function loadExtra() { try { const s = localStorage.getItem('icon_gallery_extra'); if (s) extraFolders = JSON.parse(s); } catch(e){} }
+function allFolders() { return [...categories, ...extraFolders]; }
+
+(async function init() {
+  loadExtra();
+  document.addEventListener('keydown', e => { if (e.key==='Escape'){closeLightbox();hideAddModal();} });
+  try {
+    const saved = localStorage.getItem('icon_thumb_size');
+    if (saved) { document.getElementById('thumbSizeSlider').value = saved; updateThumbSize(saved); }
+  } catch(e){}
+  showSidebarLoading();
+  try {
+    const results = await Promise.all(ROOT_FOLDERS.map(r => fetchSubfolders(r.id, r.name)));
+    categories = results.flat();
+    renderSidebar();
+    const all = allFolders();
+    if (all.length > 0) await selectFolder(all[0]);
+  } catch(e) {
+    console.error('Init error:', e);
+    showSidebarError(e.message);
+  }
+})();
+
+async function fetchSubfolders(parentId, parentName) {
+  const q      = encodeURIComponent(`'${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const fields = encodeURIComponent('files(id,name)');
+  let all = [], pageToken = '';
+  do {
+    const url  = `${GAPI}/files?q=${q}&fields=nextPageToken,${fields}&pageSize=100&key=${API_KEY}${pageToken?'&pageToken='+pageToken:''}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || '無法讀取資料夾');
+    (data.files||[]).forEach(f => all.push({id:f.id, name:f.name, parentName}));
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+  if (all.length === 0) all.push({id:parentId, name:parentName, parentName:''});
+  return all;
+}
+
+async function fetchImages(folderId) {
+  const q      = encodeURIComponent(`'${folderId}' in parents and mimeType contains 'image/' and trashed=false`);
+  const fields = encodeURIComponent('files(id,name,mimeType,webViewLink)');
+  let allFiles = [], pageToken = '';
+  do {
+    const url  = `${GAPI}/files?q=${q}&fields=nextPageToken,${fields}&pageSize=200&key=${API_KEY}${pageToken?'&pageToken='+pageToken:''}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || '無法讀取圖片');
+    allFiles = allFiles.concat(data.files||[]);
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+  return allFiles;
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────────
+function showSidebarLoading() {
+  document.getElementById('folderList').innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:120px;gap:8px"><div class="spinner"></div><span style="font-size:12px;color:var(--text3)">讀取分類中...</span></div>';
+}
+function showSidebarError(msg) {
+  document.getElementById('folderList').innerHTML =
+    '<div style="padding:16px 10px;font-size:12px;color:var(--danger);text-align:center;line-height:1.6">'+esc(msg)+'</div>';
+}
+
+function renderSidebar() {
+  const list = document.getElementById('folderList');
+  const all  = allFolders();
+  if (!all.length) { list.innerHTML='<div style="padding:20px 10px;font-size:12px;color:var(--text3);text-align:center">尚無分類</div>'; return; }
+  const groups = {};
+  all.forEach(f => { const g=f.parentName||'其他'; if(!groups[g]) groups[g]=[]; groups[g].push(f); });
+  const multiGroup = Object.keys(groups).length > 1;
+  let html = '';
+  for (const [groupName, items] of Object.entries(groups)) {
+    if (multiGroup) html += '<div style="padding:8px 10px 3px;font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--text3);text-transform:uppercase">'+esc(groupName)+'</div>';
+    for (const f of items) {
+      const active = currentFolder && currentFolder.id===f.id ? ' active' : '';
+      const delBtn = f.isExtra ? '<button class="folder-delete" onclick="event.stopPropagation();deleteExtra(\''+f.id+'\')" title="刪除">✕</button>' : '';
+      html += '<div class="folder-item'+active+'" onclick="selectFolderById(\''+f.id+'\')"><span class="folder-icon">📁</span><span class="folder-label">'+esc(f.name)+'</span>'+delBtn+'<span class="folder-count" id="count-'+f.id+'">—</span></div>';
+    }
+  }
+  list.innerHTML = html;
+}
+
+function selectFolderById(id) {
+  const f = allFolders().find(x => x.id===id);
+  if (f) selectFolder(f);
+}
+
+async function selectFolder(f) {
+  currentFolder = f;
+  document.getElementById('mainTitle').textContent = f.name;
+  document.getElementById('mainSub').textContent   = '載入中...';
+  document.getElementById('searchInput').value     = '';
+  renderSidebar();
+  showLoading();
+  try {
+    const files = await fetchImages(f.id);
+    currentFiles = files;
+    files.forEach(file => { fileMap[file.id] = file; });
+    const countEl = document.getElementById('count-'+f.id);
+    if (countEl) countEl.textContent = files.length;
+    document.getElementById('mainSub').textContent = files.length+' 個圖示';
+    renderGrid(files);
+  } catch(e) {
+    showError(e.message);
+    document.getElementById('mainSub').textContent = '載入失敗';
+  }
+}
+
+function deleteExtra(id) {
+  if (!confirm('確定要從清單移除這個資料夾嗎？')) return;
+  extraFolders = extraFolders.filter(f => f.id!==id);
+  saveExtra();
+  if (currentFolder && currentFolder.id===id) {
+    currentFolder = null;
+    document.getElementById('mainTitle').textContent = '選擇一個資料夾';
+    document.getElementById('mainSub').textContent   = '';
+    document.getElementById('gridArea').innerHTML    = '<div class="no-select"><div class="big-icon">🗂️</div><p>從左側選擇一個資料夾</p></div>';
+  }
+  renderSidebar();
+}
+
+
+// ── Grid ──────────────────────────────────────────────────────────────────
+const THUMB_SRCS = [
+  id => 'https://lh3.googleusercontent.com/d/'+id+'=s200',
+  id => 'https://drive.google.com/thumbnail?id='+id+'&sz=w200',
+  id => 'https://drive.google.com/uc?export=view&id='+id,
+];
+
+function loadImg(fileId) {
+  let attempt = 0;
+  const img = document.getElementById('img-'+fileId);
+  const ph  = document.getElementById('ph-'+fileId);
+  if (!img) return;
+
+  function tryLoad() {
+    const url = THUMB_SRCS[attempt](fileId);
+    const probe = new Image();
+    probe.onload = function() {
+      img.src = url;
+      img.style.display = 'block';
+      if (ph) ph.style.display = 'none';
+    };
+    probe.onerror = function() {
+      attempt++;
+      if (attempt < THUMB_SRCS.length) {
+        tryLoad();
+      }
+    };
+    probe.src = url;
+  }
+  tryLoad();
+}
+
+function renderGrid(files) {
+  const area = document.getElementById('gridArea');
+  if (!files.length) {
+    area.innerHTML = '<div class="state-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg><p>此資料夾沒有圖片</p></div>';
+    return;
+  }
+  let html = '<div class="icon-grid '+(viewMode==='list'?'list-view':'')+'" id="iconGrid">';
+  for (const f of files) {
+    const ext = (f.name.split('.').pop()||'').toUpperCase();
+    html += '<div class="icon-card" onclick="openLightboxById(\''+f.id+'\')">'
+          + '<div class="icon-thumb">'
+          + '<svg class="placeholder-icon" id="ph-'+f.id+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+          + '<img id="img-'+f.id+'" alt="'+esc(f.name)+'" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">'
+          + '</div>'
+          + '<div class="icon-name">'+esc(f.name)+'</div>'
+          + '<div class="icon-size">'+ext+'</div>'
+          + '</div>';
+  }
+  html += '</div>';
+  area.innerHTML = html;
+  // Stagger image loading to avoid rate limiting
+  files.forEach((f, i) => setTimeout(() => loadImg(f.id), i * 50));
+}
+
+
+function filterIcons() {
+  const q    = document.getElementById('searchInput').value.toLowerCase().trim();
+  const grid = document.getElementById('iconGrid');
+  if (!grid) return;
+  let visible = 0;
+  grid.querySelectorAll('.icon-card').forEach(c => {
+    const name = c.querySelector('.icon-name').textContent.toLowerCase();
+    const show = !q || name.includes(q);
+    c.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('mainSub').textContent = q
+    ? '搜尋「'+q+'」— '+visible+' 個結果'
+    : currentFiles.length+' 個圖示';
+}
+
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById('gridBtn').classList.toggle('active', mode==='grid');
+  document.getElementById('listBtn').classList.toggle('active', mode==='list');
+  const grid = document.getElementById('iconGrid');
+  if (grid) grid.classList.toggle('list-view', mode==='list');
+}
+
+function updateThumbSize(val) {
+  const size = parseInt(val);
+  const root = document.documentElement;
+  root.style.setProperty('--thumb-size', size+'px');
+  root.style.setProperty('--card-min', (size+28)+'px');
+  root.style.setProperty('--card-pad', Math.max(6, Math.round(size*0.13))+'px');
+  root.style.setProperty('--grid-gap', size>120 ? '14px' : '10px');
+  try { localStorage.setItem('icon_thumb_size', val); } catch(e){}
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────
+function openLightboxById(id) {
+  const f = fileMap[id];
+  if (!f) return;
+  lbCurrentFile = f;
+  const lbImg = document.getElementById('lbImg');
+  lbImg.src = 'https://lh3.googleusercontent.com/d/'+f.id+'=s800';
+  lbImg.onerror = function() {
+    lbImg.onerror = function() {
+      lbImg.onerror = null;
+      lbImg.src = 'https://drive.google.com/uc?export=view&id='+f.id;
+    };
+    lbImg.src = 'https://drive.google.com/thumbnail?id='+f.id+'&sz=w800';
+  };
+  lbImg.alt = f.name;
+  document.getElementById('lbName').textContent   = f.name;
+  document.getElementById('lbExt').textContent    = (f.name.split('.').pop()||'').toUpperCase();
+  document.getElementById('lbFolder').textContent = currentFolder ? currentFolder.name : '';
+  document.getElementById('lightboxOverlay').style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightboxOverlay').style.display = 'none';
+  lbCurrentFile = null;
+}
+function copyFileName() {
+  if (!lbCurrentFile) return;
+  navigator.clipboard.writeText(lbCurrentFile.name).then(() => {
+    const btn  = event.target.closest('.lb-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ 已複製';
+    setTimeout(() => btn.innerHTML=orig, 1500);
+  });
+}
+function openInDrive() {
+  if (!lbCurrentFile) return;
+  window.open(lbCurrentFile.webViewLink||'https://drive.google.com/file/d/'+lbCurrentFile.id+'/view', '_blank');
+}
+
+// ── Add folder modal ──────────────────────────────────────────────────────
+function showAddModal() {
+  document.getElementById('newFolderName').value = '';
+  document.getElementById('newFolderId').value   = '';
+  document.getElementById('addModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('newFolderName').focus(), 50);
+}
+function hideAddModal() { document.getElementById('addModal').style.display='none'; }
+async function addFolder() {
+  const name = document.getElementById('newFolderName').value.trim();
+  const id   = document.getElementById('newFolderId').value.trim().replace(/.*\/folders\//, '').split('?')[0];
+  if (!name) { document.getElementById('newFolderName').focus(); return; }
+  if (!id)   { document.getElementById('newFolderId').focus(); return; }
+  if (allFolders().find(f=>f.id===id)) { alert('這個資料夾已經在清單中了'); return; }
+  const f = {id, name, parentName:'手動新增', isExtra:true};
+  extraFolders.push(f);
+  saveExtra();
+  hideAddModal();
+  renderSidebar();
+  await selectFolder(f);
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('gridArea').innerHTML =
+    '<div class="state-loading"><div class="spinner"></div><p>正在讀取圖示...</p></div>';
+}
+function showError(msg) {
+  document.getElementById('gridArea').innerHTML =
+    '<div class="state-error"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>讀取失敗</p><p class="err-detail">'+esc(msg)+'<br><br>請確認資料夾已設為「知道連結的人皆可檢視」</p></div>';
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
