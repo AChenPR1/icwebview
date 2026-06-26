@@ -694,18 +694,31 @@ function triggerFolderUpload(){
   document.getElementById('folderInput').click();
 }
 
+const IMG_EXTS = new Set(['png','jpg','jpeg','gif','webp','bmp','tiff','tif','ico','svg','avif']);
+function isImageFile(f){
+  if(f.type && f.type.startsWith('image/')) return true;
+  const ext = f.name.split('.').pop().toLowerCase();
+  return IMG_EXTS.has(ext);
+}
+
 function handleFileInput(files){
   if(!files||!files.length) return;
   const all = Array.from(files);
-  const imgs = all.filter(f => f.type.startsWith('image/'));
+  const imgs = all.filter(isImageFile);
   const skipped = all.length - imgs.length;
+  const hint = document.getElementById('uploadHint');
   if(skipped > 0){
-    const hint = document.getElementById('uploadHint');
-    hint.textContent = `已略過 ${skipped} 個非圖檔`;
+    hint.textContent = `已略過 ${skipped} 個非圖檔，共 ${imgs.length} 張圖片`;
     hint.style.color = 'var(--text3)';
-    setTimeout(()=>{ hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; }, 3000);
+    setTimeout(()=>{ hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; }, 4000);
   }
-  if(imgs.length) processUploadFiles(imgs);
+  if(!imgs.length){
+    hint.textContent = '未找到任何圖片檔案';
+    hint.style.color = 'var(--danger)';
+    setTimeout(()=>{ hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; }, 3000);
+    return;
+  }
+  processUploadFiles(imgs);
 }
 
 async function processUploadFiles(files){
@@ -802,14 +815,48 @@ function appendCardToGrid(f, i){
     if(dragCount===0) document.getElementById('dropOverlay').classList.remove('show');
   });
   document.addEventListener('dragover', e=>e.preventDefault());
-  document.addEventListener('drop', e=>{
+  document.addEventListener('drop', async e=>{
     e.preventDefault(); dragCount=0;
     document.getElementById('dropOverlay').classList.remove('show');
     if(!currentFolder){ alert('請先選擇一個資料夾再拖曳上傳'); return; }
-    const files=Array.from(e.dataTransfer.files);
-    if(files.length) processUploadFiles(files);
+    const items = Array.from(e.dataTransfer.items||[]);
+    if(items.length && items[0].webkitGetAsEntry){
+      // Use DataTransferItem API to support folders
+      const files = await readDropItems(items);
+      if(files.length) processUploadFiles(files);
+    } else {
+      const files = Array.from(e.dataTransfer.files||[]);
+      if(files.length) processUploadFiles(files);
+    }
   });
 })();
+
+// Recursively read dropped files (supports folders)
+async function readDropItems(items){
+  const files = [];
+  async function readEntry(entry){
+    if(entry.isFile){
+      await new Promise(res=>entry.file(f=>{ files.push(f); res(); }, res));
+    } else if(entry.isDirectory){
+      const reader = entry.createReader();
+      await new Promise(res=>{
+        function readBatch(){
+          reader.readEntries(async entries=>{
+            if(!entries.length){ res(); return; }
+            await Promise.all(entries.map(readEntry));
+            readBatch();
+          });
+        }
+        readBatch();
+      });
+    }
+  }
+  await Promise.all(items.map(item=>{
+    const entry = item.webkitGetAsEntry();
+    return entry ? readEntry(entry) : Promise.resolve();
+  }));
+  return files;
+}
 
 // ── Delete modal ─────────────────────────────────────────────────────────────
 let deleteTarget = null; // {type:'file'|'folder', id, name}
