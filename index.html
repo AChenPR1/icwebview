@@ -76,6 +76,8 @@
   .icon-grid.lv .iname{font-size:13px;text-align:left;flex:1;-webkit-line-clamp:1;}
   .iext{font-size:10px;color:var(--text3);display:none;}
   .icon-grid.lv .iext{display:block;font-size:11px;margin-left:auto;}
+  .ires{font-size:10px;color:var(--text3);text-align:center;min-height:12px;line-height:1;}
+  .icon-grid.lv .ires{font-size:11px;margin-left:4px;}
   /* states */
   .st-empty,.st-load,.st-err{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);}
   .st-err p{color:var(--danger);}.st-err .ed{font-size:11px;color:var(--text3);max-width:300px;text-align:center;line-height:1.5;}
@@ -189,9 +191,14 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           上傳圖檔
         </button>
+        <button class="upload-btn" onclick="triggerFolderUpload()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17"/><polyline points="9 14 12 11 15 14"/></svg>
+          上傳資料夾
+        </button>
         <span class="upload-hint" id="uploadHint">選擇資料夾後可拖曳圖檔至此上傳</span>
         <div class="upload-progress" id="uploadProgress"></div>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFileInput(this.files)">
+        <input type="file" id="folderInput" webkitdirectory mozdirectory multiple style="display:none" onchange="handleFileInput(this.files)">
       </div>
       <div class="grid-area" id="gridArea"><div class="nosel"><div class="bi">🗂️</div><p>從左側選擇一個資料夾</p></div></div>
     </div>
@@ -213,6 +220,7 @@
       <div class="lb-meta">
         <span class="lb-tag" id="lbExt"></span>
         <span class="lb-tag" id="lbFolder"></span>
+        <span class="lb-tag" id="lbRes" style="color:rgba(255,255,255,.7)"></span>
         <span class="lb-counter" id="lbCounter"></span>
       </div>
       <div class="lb-actions">
@@ -523,7 +531,17 @@ function loadThumb(fileId){
   const img=document.getElementById('img-'+fileId);
   const ph=document.getElementById('ph-'+fileId);
   if(!img) return;
-  probeLoad(TSRCS, fileId, url=>{ img.src=url; img.style.display='block'; if(ph) ph.style.display='none'; });
+  probeLoad(TSRCS, fileId, url=>{
+    img.src=url;
+    img.style.display='block';
+    if(ph) ph.style.display='none';
+    img.onload=function(){
+      const res=document.getElementById('res-'+fileId);
+      if(res&&img.naturalWidth) res.textContent=img.naturalWidth+'×'+img.naturalHeight;
+      // store for lightbox
+      if(fileMap[fileId]) fileMap[fileId]._w=img.naturalWidth, fileMap[fileId]._h=img.naturalHeight;
+    };
+  });
 }
 
 function renderGrid(files){
@@ -540,7 +558,7 @@ function renderGrid(files){
         <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
       </div>
       <div class="iname">${esc(f.name)}</div>
-      <div class="iext">${ext}</div>
+      <div class="ires" id="res-${f.id}"></div>
     </div>`;
   });
   h+='</div>';
@@ -598,6 +616,9 @@ function showLbImg(){
   document.getElementById('lbExt').textContent=(f.name.split('.').pop()||'').toUpperCase();
   document.getElementById('lbFolder').textContent=currentFolder?currentFolder.name:'';
   document.getElementById('lbCounter').textContent=(lbIndex+1)+' / '+lbFiles.length;
+  // Show resolution from thumbnail (original size), not from scaled lightbox image
+  const lbRes=document.getElementById('lbRes');
+  lbRes.textContent = (f._w && f._h) ? f._w+' × '+f._h+' px' : '';
   document.getElementById('lbPrev').disabled=lbIndex<=0;
   document.getElementById('lbNext').disabled=lbIndex>=lbFiles.length-1;
 }
@@ -668,7 +689,24 @@ function triggerUpload(){
   document.getElementById('fileInput').click();
 }
 
-function handleFileInput(files){ if(files&&files.length) processUploadFiles(Array.from(files)); }
+function triggerFolderUpload(){
+  if(!currentFolder){ alert('請先選擇一個資料夾'); return; }
+  document.getElementById('folderInput').click();
+}
+
+function handleFileInput(files){
+  if(!files||!files.length) return;
+  const all = Array.from(files);
+  const imgs = all.filter(f => f.type.startsWith('image/'));
+  const skipped = all.length - imgs.length;
+  if(skipped > 0){
+    const hint = document.getElementById('uploadHint');
+    hint.textContent = `已略過 ${skipped} 個非圖檔`;
+    hint.style.color = 'var(--text3)';
+    setTimeout(()=>{ hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; }, 3000);
+  }
+  if(imgs.length) processUploadFiles(imgs);
+}
 
 async function processUploadFiles(files){
   if(!currentFolder){ alert('請先選擇一個資料夾'); return; }
@@ -743,7 +781,7 @@ function appendCardToGrid(f, i){
       <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
     </div>
     <div class="iname">${esc(f.name)}</div>
-    <div class="iext">${ext}</div>`;
+    <div class="ires" id="res-${f.id}"></div>`;
   grid.appendChild(div);
   setTimeout(()=>loadThumb(f.id), 300);
 }
