@@ -421,16 +421,27 @@ function loadFolders() {
   } catch(e){}
 }
 
+// ─── Default folders (always present, shared for everyone) ─────────────────
+const DEFAULT_FOLDERS = [
+  { id: '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB', name: '全部圖示' },
+];
+
 // ─── Boot ──────────────────────────────────────────────────────────────────
-(function init() {
+(async function init() {
   loadFolders();
-  // Pre-load the user's folder
-  if (!folders.find(f => f.id === '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB')) {
-    folders.push({ id: '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB', name: '全部圖示' });
-    saveFolders();
-  }
+  // Merge default folders in (always show them even on fresh browsers)
+  DEFAULT_FOLDERS.forEach(df => {
+    if (!folders.find(f => f.id === df.id)) {
+      folders.unshift(df);
+      saveFolders();
+    }
+  });
   renderSidebar();
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeLightbox(); hideAddModal(); } });
+  // Auto-load the first folder so everyone sees content immediately
+  if (folders.length > 0) {
+    await selectFolder(folders[0]);
+  }
 })();
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
