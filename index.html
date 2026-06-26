@@ -88,6 +88,20 @@
   .del-modal-name{font-size:13px;color:var(--text2);background:var(--bg3);border-radius:var(--radius);padding:8px 12px;margin-bottom:14px;word-break:break-all;line-height:1.5;}
   .del-warning{font-size:12px;color:var(--danger);margin-bottom:14px;line-height:1.5;}
   .del-status{font-size:12px;min-height:18px;margin-bottom:8px;color:var(--text3);}
+  /* upload */
+  .upload-bar{display:flex;align-items:center;gap:10px;padding:8px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .upload-btn{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:var(--radius);background:var(--accent-bg);border:1px solid var(--accent);color:var(--accent);font-size:12px;cursor:pointer;transition:background .12s;}
+  .upload-btn:hover{background:rgba(124,106,247,.2);}
+  .upload-hint{font-size:11px;color:var(--text3);}
+  .upload-progress{flex:1;display:flex;flex-direction:column;gap:4px;max-height:56px;overflow-y:auto;}
+  .up-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);}
+  .up-item .up-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .up-item .up-bar{width:80px;height:4px;border-radius:2px;background:var(--bg4);flex-shrink:0;}
+  .up-item .up-fill{height:100%;border-radius:2px;background:var(--accent);transition:width .2s;}
+  .up-item .up-st{font-size:10px;flex-shrink:0;width:28px;text-align:right;}
+  .drop-overlay{position:fixed;inset:0;background:rgba(124,106,247,.18);border:3px dashed var(--accent);z-index:500;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .15s;}
+  .drop-overlay.show{opacity:1;}
+  .drop-overlay span{font-size:22px;font-weight:600;color:var(--accent);background:var(--bg2);padding:16px 32px;border-radius:12px;}
   /* lightbox */
   .lb-ov{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;display:flex;align-items:center;justify-content:center;animation:fi .15s ease;}
   @keyframes fi{from{opacity:0;}to{opacity:1;}}
@@ -170,10 +184,22 @@
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="7" height="7" rx="1"/><rect x="9" y="0" width="7" height="7" rx="1"/><rect x="0" y="9" width="7" height="7" rx="1"/><rect x="9" y="9" width="7" height="7" rx="1"/></svg>
         </div>
       </div>
+      <div class="upload-bar" id="uploadBar">
+        <button class="upload-btn" onclick="triggerUpload()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          上傳圖檔
+        </button>
+        <span class="upload-hint" id="uploadHint">選擇資料夾後可拖曳圖檔至此上傳</span>
+        <div class="upload-progress" id="uploadProgress"></div>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFileInput(this.files)">
+      </div>
       <div class="grid-area" id="gridArea"><div class="nosel"><div class="bi">🗂️</div><p>從左側選擇一個資料夾</p></div></div>
     </div>
   </div>
 </div>
+
+<!-- Drop overlay -->
+<div class="drop-overlay" id="dropOverlay"><span>放開以上傳至「<span id="dropFolderName"></span>」</span></div>
 
 <!-- Lightbox -->
 <div class="lb-ov" id="lbOv" style="display:none" onclick="if(event.target===this)closeLb()">
@@ -606,6 +632,157 @@ function copyFileName(){
     setTimeout(()=>btn.innerHTML=orig,1500);
   });
 }
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+async function uploadFileToDrive(file, folderId, onProgress){
+  const token = await ensureAccessToken();
+  return new Promise((resolve, reject) => {
+    const meta = JSON.stringify({name: file.name, parents: [folderId]});
+    const boundary = '-------boundary' + Date.now();
+    const delimiter = '
+--' + boundary + '
+';
+    const closeDelim = '
+--' + boundary + '--';
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const base64 = e.target.result.split(',')[1];
+      const body = delimiter +
+        'Content-Type: application/json
+
+' + meta +
+        delimiter +
+        'Content-Type: ' + file.type + '
+Content-Transfer-Encoding: base64
+
+' + base64 +
+        closeDelim;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.setRequestHeader('Content-Type', 'multipart/related; boundary=' + boundary);
+      xhr.upload.onprogress = e => { if(e.lengthComputable) onProgress(e.loaded/e.total); };
+      xhr.onload = () => {
+        const d = JSON.parse(xhr.responseText);
+        if(d.error) reject(new Error(d.error.message));
+        else resolve(d);
+      };
+      xhr.onerror = () => reject(new Error('網路錯誤'));
+      xhr.send(body);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function triggerUpload(){
+  if(!currentFolder){ alert('請先選擇一個資料夾'); return; }
+  document.getElementById('fileInput').click();
+}
+
+function handleFileInput(files){ if(files&&files.length) processUploadFiles(Array.from(files)); }
+
+async function processUploadFiles(files){
+  if(!currentFolder){ alert('請先選擇一個資料夾'); return; }
+  const folderId = currentFolder.id;
+  const progress = document.getElementById('uploadProgress');
+  document.getElementById('uploadHint').style.display='none';
+
+  // Filter images only
+  const imgFiles = files.filter(f => f.type.startsWith('image/'));
+  if(!imgFiles.length){ alert('請上傳圖片檔案（PNG、JPG、GIF、WEBP 等）'); return; }
+
+  // Create progress rows
+  const rows = {};
+  imgFiles.forEach(f => {
+    const id = 'up-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    rows[f.name] = id;
+    progress.insertAdjacentHTML('beforeend',
+      `<div class="up-item" id="${id}">
+        <span class="up-name">${esc(f.name)}</span>
+        <div class="up-bar"><div class="up-fill" id="fill-${id}" style="width:0%"></div></div>
+        <span class="up-st" id="st-${id}">0%</span>
+      </div>`);
+  });
+
+  let succeeded = 0;
+  try { await ensureAccessToken(); } catch(e){ alert('授權失敗：'+e.message); return; }
+
+  await Promise.all(imgFiles.map(async file => {
+    const rowId = rows[file.name];
+    try {
+      const created = await uploadFileToDrive(file, folderId, pct => {
+        const fill = document.getElementById('fill-'+rowId);
+        const st = document.getElementById('st-'+rowId);
+        if(fill) fill.style.width = Math.round(pct*100)+'%';
+        if(st) st.textContent = Math.round(pct*100)+'%';
+      });
+      const st = document.getElementById('st-'+rowId);
+      if(st){ st.textContent='✓'; st.style.color='#4caf82'; }
+      // Add to grid live
+      const newFile = {id:created.id, name:created.name, mimeType:created.mimeType};
+      fileMap[created.id] = newFile;
+      currentFiles.push(newFile);
+      lbFiles = currentFiles;
+      const countEl = document.getElementById('count-'+folderId);
+      if(countEl) countEl.textContent = currentFiles.length;
+      document.getElementById('mainSub').textContent = currentFiles.length+' 個圖示';
+      appendCardToGrid(newFile, currentFiles.length-1);
+      succeeded++;
+    } catch(e) {
+      const st = document.getElementById('st-'+rowId);
+      if(st){ st.textContent='✗'; st.style.color='var(--danger)'; st.title=e.message; }
+    }
+  }));
+
+  setTimeout(()=>{
+    progress.innerHTML='';
+    document.getElementById('uploadHint').style.display='';
+  }, 3000);
+}
+
+function appendCardToGrid(f, i){
+  const grid = document.getElementById('iconGrid');
+  if(!grid) { renderGrid(currentFiles); return; }
+  const ext = (f.name.split('.').pop()||'').toUpperCase();
+  const div = document.createElement('div');
+  div.className = 'icon-card';
+  div.style.position = 'relative';
+  div.onclick = () => openLb(i);
+  div.innerHTML = `<button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+    <div class="thumb">
+      <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
+    </div>
+    <div class="iname">${esc(f.name)}</div>
+    <div class="iext">${ext}</div>`;
+  grid.appendChild(div);
+  setTimeout(()=>loadThumb(f.id), 300);
+}
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+(function setupDnd(){
+  let dragCount=0;
+  document.addEventListener('dragenter', e=>{
+    if(!e.dataTransfer.types.includes('Files')) return;
+    dragCount++;
+    if(dragCount===1){
+      document.getElementById('dropFolderName').textContent = currentFolder?currentFolder.name:'（請先選資料夾）';
+      document.getElementById('dropOverlay').classList.add('show');
+    }
+  });
+  document.addEventListener('dragleave', e=>{
+    dragCount--;
+    if(dragCount===0) document.getElementById('dropOverlay').classList.remove('show');
+  });
+  document.addEventListener('dragover', e=>e.preventDefault());
+  document.addEventListener('drop', e=>{
+    e.preventDefault(); dragCount=0;
+    document.getElementById('dropOverlay').classList.remove('show');
+    if(!currentFolder){ alert('請先選擇一個資料夾再拖曳上傳'); return; }
+    const files=Array.from(e.dataTransfer.files);
+    if(files.length) processUploadFiles(files);
+  });
+})();
 
 // ── Delete modal ─────────────────────────────────────────────────────────────
 let deleteTarget = null; // {type:'file'|'folder', id, name}
