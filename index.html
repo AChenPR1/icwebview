@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>遊戲圖示圖庫</title>
+<title>Idel Casino圖庫 v1.0</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -162,6 +162,9 @@
   .bulk-del-btn:hover{background:rgba(224,92,92,.22);}
   .bulk-clear-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius);background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;transition:background .12s;}
   .bulk-clear-btn:hover{background:var(--bg3);}
+  /* folder drop target / card drag */
+  .folder-item.drop-hover{background:rgba(124,106,247,.22) !important;outline:2px dashed var(--accent);outline-offset:-2px;}
+  .icon-card.drag-src{opacity:.35;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -169,7 +172,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      遊戲圖示圖庫
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.0</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -228,7 +231,10 @@
 </div>
 
 <!-- Drop overlay -->
-<div class="drop-overlay" id="dropOverlay"><span>放開以上傳至「<span id="dropFolderName"></span>」</span></div>
+<div class="drop-overlay" id="dropOverlay">
+  <span id="dropMsgFile">放開以上傳至「<span id="dropFolderName"></span>」</span>
+  <span id="dropMsgFolder" style="display:none">放開以建立新資料夾並上傳</span>
+</div>
 
 <!-- Lightbox -->
 <div class="lb-ov" id="lbOv" style="display:none" onclick="if(event.target===this)closeLb()">
@@ -303,6 +309,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
+const VERSION      = 'v1.0';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -423,7 +430,7 @@ function renderSidebar(){
   let html='';
   categories.forEach(f=>{
     const active=currentFolder&&currentFolder.id===f.id?' active':'';
-    html+=`<div class="folder-item${active}" onclick="selectFolderById('${f.id}')">
+    html+=`<div class="folder-item${active}" onclick="selectFolderById('${f.id}')" ondragover="folderDragOver(event,'${f.id}')" ondragleave="folderDragLeave(event,'${f.id}')" ondrop="folderDrop(event,'${f.id}')">
       <span style="font-size:16px;flex-shrink:0;opacity:.7">📁</span>
       <span class="folder-label">${esc(f.name)}</span>
       <div class="folder-actions">
@@ -575,7 +582,7 @@ function renderGrid(files){
   let h='<div class="icon-grid '+(viewMode==='list'?'lv':'')+'" id="iconGrid">';
   files.forEach((f,i)=>{
     const ext=(f.name.split('.').pop()||'').toUpperCase();
-    h+=`<div class="icon-card${selectedIds.has(f.id)?' selected':''}" onclick="openLb(${i})" style="position:relative">
+    h+=`<div class="icon-card${selectedIds.has(f.id)?' selected':''}" draggable="true" ondragstart="startCardDrag(event,'${f.id}')" onclick="openLb(${i})" style="position:relative">
       <button class="card-check${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
       </button>
@@ -757,9 +764,11 @@ function handleFolderInput(files){
 async function uploadFolderStructure(imgFiles){
   const hint = document.getElementById('uploadHint');
   const progress = document.getElementById('uploadProgress');
+  // 支援 webkitRelativePath（<input>）或 _dropRelPath（拖曳 API）
+  const getRelPath = f => f.webkitRelativePath || f._dropRelPath || f.name;
 
-  // 取得根資料夾名稱（webkitRelativePath 第一段）
-  const rootFolderName = imgFiles[0].webkitRelativePath.split('/')[0];
+  // 取得根資料夾名稱（路徑第一段）
+  const rootFolderName = getRelPath(imgFiles[0]).split('/')[0];
   if(!rootFolderName){
     alert('無法取得資料夾名稱，請重新選擇資料夾。');
     hint.textContent='選擇資料夾後可拖曳圖檔至此上傳';
@@ -790,7 +799,7 @@ async function uploadFolderStructure(imgFiles){
   // 蒐集所有子路徑（相對於根資料夾，不含檔名）
   const subPathSet = new Set();
   imgFiles.forEach(f=>{
-    const parts = f.webkitRelativePath.split('/');
+    const parts = getRelPath(f).split('/');
     for(let d=1; d<parts.length-1; d++){
       subPathSet.add(parts.slice(1,d+1).join('/'));
     }
@@ -812,7 +821,7 @@ async function uploadFolderStructure(imgFiles){
       const created = await createDriveFolder(folderName, parentId);
       folderIdMap[path] = created.id;
     }catch(e){
-      folderIdMap[path] = parentId; // 建立失敗則退回父層
+      folderIdMap[path] = parentId;
     }
   }
 
@@ -821,8 +830,8 @@ async function uploadFolderStructure(imgFiles){
   const rows = {};
   imgFiles.forEach(f=>{
     const uid = 'up-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-    rows[f.webkitRelativePath] = uid;
-    const label = f.webkitRelativePath.split('/').slice(1).join('/');
+    rows[getRelPath(f)] = uid;
+    const label = getRelPath(f).split('/').slice(1).join('/');
     progress.insertAdjacentHTML('beforeend',
       `<div class="up-item" id="${uid}">
         <span class="up-name">${esc(label)}</span>
@@ -833,10 +842,10 @@ async function uploadFolderStructure(imgFiles){
 
   // 並行上傳所有圖檔
   await Promise.all(imgFiles.map(async file=>{
-    const parts = file.webkitRelativePath.split('/');
+    const parts = getRelPath(file).split('/');
     const subPath = parts.slice(1,-1).join('/');
     const targetId = folderIdMap[subPath]||rootFolder.id;
-    const rowId = rows[file.webkitRelativePath];
+    const rowId = rows[getRelPath(file)];
     try{
       const created = await uploadFileToDrive(file, targetId, pct=>{
         const fill=document.getElementById('fill-'+rowId);
@@ -937,6 +946,8 @@ function appendCardToGrid(f, i){
   const div = document.createElement('div');
   div.className = 'icon-card';
   div.style.position = 'relative';
+  div.draggable = true;
+  div.addEventListener('dragstart', e => startCardDrag(e, f.id));
   div.onclick = () => openLb(i);
   div.innerHTML = `<button class="card-check" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
@@ -952,34 +963,60 @@ function appendCardToGrid(f, i){
   setTimeout(()=>loadThumb(f.id), 300);
 }
 
-// ── Drag & drop ───────────────────────────────────────────────────────────────
+// ── Drag & drop (filesystem → upload) ────────────────────────────────────────
 (function setupDnd(){
   let dragCount=0;
   document.addEventListener('dragenter', e=>{
-    if(!e.dataTransfer.types.includes('Files')) return;
+    if(!e.dataTransfer.types.includes('Files')) return; // skip internal card drags
     dragCount++;
     if(dragCount===1){
-      document.getElementById('dropFolderName').textContent = currentFolder?currentFolder.name:'（請先選資料夾）';
+      const hasFolder = Array.from(e.dataTransfer.items||[]).some(item=>{
+        try{ return item.webkitGetAsEntry()?.isDirectory; }catch(ex){ return false; }
+      });
+      const msgFile   = document.getElementById('dropMsgFile');
+      const msgFolder = document.getElementById('dropMsgFolder');
+      if(hasFolder){
+        if(msgFile)   msgFile.style.display='none';
+        if(msgFolder) msgFolder.style.display='';
+      } else {
+        document.getElementById('dropFolderName').textContent = currentFolder?currentFolder.name:'（請先選資料夾）';
+        if(msgFile)   msgFile.style.display='';
+        if(msgFolder) msgFolder.style.display='none';
+      }
       document.getElementById('dropOverlay').classList.add('show');
     }
   });
   document.addEventListener('dragleave', e=>{
+    if(!e.dataTransfer.types.includes('Files')) return;
     dragCount--;
     if(dragCount===0) document.getElementById('dropOverlay').classList.remove('show');
   });
-  document.addEventListener('dragover', e=>e.preventDefault());
+  // Only preventDefault for filesystem drags; internal card drags let folder items handle it
+  document.addEventListener('dragover', e=>{
+    if(!e.dataTransfer.types.includes('text/x-icon-ids')) e.preventDefault();
+  });
   document.addEventListener('drop', async e=>{
+    if(e.dataTransfer.types.includes('text/x-icon-ids')) return; // handled by sidebar folders
     e.preventDefault(); dragCount=0;
     document.getElementById('dropOverlay').classList.remove('show');
-    if(!currentFolder){ alert('請先選擇一個資料夾再拖曳上傳'); return; }
     const items = Array.from(e.dataTransfer.items||[]);
-    if(items.length && items[0].webkitGetAsEntry){
-      // Use DataTransferItem API to support folders
-      const files = await readDropItems(items);
-      if(files.length) processUploadFiles(files);
+    const hasFolder = items.some(item=>{
+      try{ return item.webkitGetAsEntry()?.isDirectory; }catch(ex){ return false; }
+    });
+    if(hasFolder && items[0]?.webkitGetAsEntry){
+      // Folder drop → create folder structure
+      const files = await readDropItemsWithPaths(items);
+      const imgs = files.filter(isImageFile);
+      if(imgs.length) uploadFolderStructure(imgs);
     } else {
-      const files = Array.from(e.dataTransfer.files||[]);
-      if(files.length) processUploadFiles(files);
+      if(!currentFolder){ alert('請先選擇一個資料夾再拖曳上傳'); return; }
+      if(items.length && items[0].webkitGetAsEntry){
+        const files = await readDropItems(items);
+        if(files.length) processUploadFiles(files);
+      } else {
+        const files = Array.from(e.dataTransfer.files||[]);
+        if(files.length) processUploadFiles(files);
+      }
     }
   });
 })();
@@ -1009,6 +1046,112 @@ async function readDropItems(items){
     return entry ? readEntry(entry) : Promise.resolve();
   }));
   return files;
+}
+
+// Recursively read dropped items preserving relative paths (for folder drag-and-drop)
+async function readDropItemsWithPaths(items){
+  const result=[];
+  async function readEntry(entry, prefix){
+    if(entry.isFile){
+      await new Promise(res=>entry.file(f=>{
+        f._dropRelPath=prefix+f.name;
+        result.push(f);
+        res();
+      }, res));
+    } else if(entry.isDirectory){
+      const reader=entry.createReader();
+      await new Promise(res=>{
+        function readBatch(){
+          reader.readEntries(async entries=>{
+            if(!entries.length){ res(); return; }
+            await Promise.all(entries.map(e=>readEntry(e, prefix+entry.name+'/')));
+            readBatch();
+          });
+        }
+        readBatch();
+      });
+    }
+  }
+  await Promise.all(items.map(item=>{
+    const entry=item.webkitGetAsEntry();
+    return entry ? readEntry(entry,'') : Promise.resolve();
+  }));
+  return result;
+}
+
+// ── Card drag (grid → sidebar move) ──────────────────────────────────────────
+function startCardDrag(e, fileId){
+  // Drag all selected if this card is in selection, otherwise just this card
+  const ids=(selectedIds.size>0&&selectedIds.has(fileId)) ? Array.from(selectedIds) : [fileId];
+  e.dataTransfer.setData('text/x-icon-ids', JSON.stringify(ids));
+  e.dataTransfer.effectAllowed='move';
+  ids.forEach(id=>{
+    const img=document.getElementById('img-'+id);
+    if(img){ const card=img.closest('.icon-card'); if(card) card.classList.add('drag-src'); }
+  });
+  const cleanup=()=>{
+    ids.forEach(id=>{
+      const img=document.getElementById('img-'+id);
+      if(img){ const card=img.closest('.icon-card'); if(card) card.classList.remove('drag-src'); }
+    });
+    document.removeEventListener('dragend',cleanup);
+  };
+  document.addEventListener('dragend',cleanup);
+}
+
+function folderDragOver(e, folderId){
+  if(!e.dataTransfer.types.includes('text/x-icon-ids')) return;
+  e.preventDefault(); e.stopPropagation();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.folder-item.drop-hover').forEach(el=>el.classList.remove('drop-hover'));
+  e.currentTarget.classList.add('drop-hover');
+}
+
+function folderDragLeave(e, folderId){
+  if(!e.relatedTarget||!e.currentTarget.contains(e.relatedTarget))
+    e.currentTarget.classList.remove('drop-hover');
+}
+
+function folderDrop(e, folderId){
+  e.preventDefault(); e.stopPropagation();
+  e.currentTarget.classList.remove('drop-hover');
+  const raw=e.dataTransfer.getData('text/x-icon-ids');
+  if(!raw) return;
+  try{ const ids=JSON.parse(raw); if(ids.length) moveFilesToFolder(ids,folderId); }catch(ex){}
+}
+
+async function moveFilesToFolder(ids, targetFolderId){
+  if(!currentFolder||targetFolderId===currentFolder.id) return;
+  const hint=document.getElementById('uploadHint');
+  hint.textContent='正在授權並移動...'; hint.style.display='';
+  let token;
+  try{ token=await ensureAccessToken(); }catch(e){ alert('授權失敗：'+e.message); hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; return; }
+  const oldFolderId=currentFolder.id;
+  let moved=0, failed=0;
+  for(const fid of ids){
+    try{
+      const res=await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fid}?addParents=${targetFolderId}&removeParents=${oldFolderId}&fields=id`,
+        {method:'PATCH',headers:{'Authorization':'Bearer '+token}}
+      );
+      if(!res.ok){ const d=await res.json().catch(()=>({})); throw new Error((d.error&&d.error.message)||res.status); }
+      currentFiles=currentFiles.filter(f=>f.id!==fid);
+      lbFiles=lbFiles.filter(f=>f.id!==fid);
+      delete fileMap[fid];
+      selectedIds.delete(fid);
+      const img=document.getElementById('img-'+fid);
+      if(img){ const card=img.closest('.icon-card'); if(card) card.remove(); }
+      moved++;
+    }catch(e){ failed++; }
+  }
+  const el=document.getElementById('count-'+oldFolderId);
+  if(el) el.textContent=currentFiles.length;
+  document.getElementById('mainSub').textContent=currentFiles.length+' 個圖示';
+  updateBulkBar();
+  hint.textContent=moved ? '已移動 '+moved+' 個圖示' : '移動失敗';
+  hint.style.color=moved ? '#4caf82' : 'var(--danger)';
+  setTimeout(()=>{ hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; hint.style.color=''; },3000);
+  if(failed) alert(failed+' 個檔案移動失敗');
 }
 
 // ── Multi-select ──────────────────────────────────────────────────────────────
