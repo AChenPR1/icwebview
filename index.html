@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.1</title>
+<title>Idel Casino圖庫 v1.2</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -38,7 +38,7 @@
   .folder-item:hover{background:var(--bg3);color:var(--text);}
   .folder-item.active{background:var(--accent-bg);color:var(--accent);}
   .folder-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .folder-count{font-size:13px;background:var(--bg4);color:var(--text3);padding:1px 6px;border-radius:10px;flex-shrink:0;}
+  .folder-count{font-size:13px;background:var(--bg4);color:rgba(255,255,255,.55);padding:1px 6px;border-radius:10px;flex-shrink:0;}
   .folder-item.active .folder-count{background:var(--accent2);color:#fff;}
   .folder-actions{display:none;gap:2px;flex-shrink:0;}
   .folder-item:hover .folder-actions{display:flex;}
@@ -164,7 +164,7 @@
   .bulk-clear-btn:hover{background:var(--bg3);}
   /* folder drop target / card drag */
   .folder-item.drop-hover{background:rgba(124,106,247,.22) !important;outline:2px dashed var(--accent);outline-offset:-2px;}
-  .icon-card.drag-src{opacity:.35;pointer-events:none;}
+  .icon-card.drag-src{opacity:.35;}
 </style>
 </head>
 <body>
@@ -172,7 +172,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.1</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.2</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -309,7 +309,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.1';
+const VERSION      = 'v1.2';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -330,6 +330,7 @@ async function loadAllFolderCounts(){
   await Promise.all(categories.map(async f=>{
     try{
       const imgs=await fetchImages(f.id);
+      f._count=imgs.length;
       const el=document.getElementById('count-'+f.id);
       if(el) el.textContent=imgs.length;
     }catch(e){}
@@ -449,7 +450,7 @@ function renderSidebar(){
         <button class="fac r" onclick="event.stopPropagation();showRenameModal('${f.id}')" title="重新命名">✏</button>
         <button class="fac d" onclick="event.stopPropagation();deleteFolder('${f.id}')" title="刪除">✕</button>
       </div>
-      <span class="folder-count" id="count-${f.id}">—</span>
+      <span class="folder-count" id="count-${f.id}">${f._count!==undefined?f._count:'—'}</span>
     </div>`;
   });
   list.innerHTML=html;
@@ -469,6 +470,7 @@ async function selectFolder(f){
     const files=await fetchImages(f.id);
     currentFiles=files; lbFiles=files;
     files.forEach(x=>{ fileMap[x.id]=x; });
+    f._count=files.length;
     const el=document.getElementById('count-'+f.id);
     if(el) el.textContent=files.length;
     document.getElementById('mainSub').textContent=files.length+' 個圖示';
@@ -595,10 +597,10 @@ function renderGrid(files){
   files.forEach((f,i)=>{
     const ext=(f.name.split('.').pop()||'').toUpperCase();
     h+=`<div class="icon-card${selectedIds.has(f.id)?' selected':''}" draggable="true" ondragstart="startCardDrag(event,'${f.id}')" onclick="openLb(${i})" style="position:relative">
-      <button class="card-check${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+      <button class="card-check${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
       </button>
-      <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+      <button class="card-del-btn" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
       <div class="thumb">
         <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
@@ -961,10 +963,10 @@ function appendCardToGrid(f, i){
   div.draggable = true;
   div.addEventListener('dragstart', e => startCardDrag(e, f.id));
   div.onclick = () => openLb(i);
-  div.innerHTML = `<button class="card-check" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+  div.innerHTML = `<button class="card-check" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
     </button>
-    <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+    <button class="card-del-btn" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
     <div class="thumb">
       <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
@@ -1098,18 +1100,23 @@ async function readDropItemsWithPaths(items){
 // ── Card drag (grid → sidebar move) ──────────────────────────────────────────
 function startCardDrag(e, fileId){
   const ids=(selectedIds.size>0&&selectedIds.has(fileId)) ? Array.from(selectedIds) : [fileId];
-  dragData=ids; // store globally — avoids dataTransfer MIME type issues cross-browser
-  e.dataTransfer.setData('text/plain','icon-drag'); // minimal payload to satisfy browsers
+  dragData=ids;
+  e.dataTransfer.setData('text/plain','icon-drag');
   e.dataTransfer.effectAllowed='move';
-  ids.forEach(id=>{
-    const img=document.getElementById('img-'+id);
-    if(img){ const card=img.closest('.icon-card'); if(card) card.classList.add('drag-src'); }
+  // defer opacity change so browser captures drag ghost before card fades
+  requestAnimationFrame(()=>{
+    ids.forEach(id=>{
+      const card=document.getElementById('img-'+id)?.closest('.icon-card')
+                 || document.getElementById('chk-'+id)?.closest('.icon-card');
+      if(card) card.classList.add('drag-src');
+    });
   });
   const cleanup=()=>{
     dragData=null;
     ids.forEach(id=>{
-      const img=document.getElementById('img-'+id);
-      if(img){ const card=img.closest('.icon-card'); if(card) card.classList.remove('drag-src'); }
+      const card=document.getElementById('img-'+id)?.closest('.icon-card')
+                 || document.getElementById('chk-'+id)?.closest('.icon-card');
+      if(card) card.classList.remove('drag-src');
     });
     document.removeEventListener('dragend',cleanup);
   };
