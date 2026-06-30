@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.4</title>
+<title>Idel Casino圖庫 v1.5</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -179,7 +179,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.4</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.5</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -187,7 +187,6 @@
       <input type="text" id="searchInput" placeholder="搜尋圖示名稱..." oninput="filterIcons()">
     </div>
     <div class="topbar-auth">
-      <span class="auth-user" id="authUser" style="display:none"></span>
       <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">登入以編輯</button>
     </div>
   </div>
@@ -237,6 +236,19 @@
         </button>
       </div>
       <div class="grid-area" id="gridArea"><div class="nosel"><div class="bi">🗂️</div><p>從左側選擇一個資料夾</p></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Password modal -->
+<div class="mov" id="pwModal" style="display:none" onclick="if(event.target===this)closePwModal()">
+  <div class="modal" style="width:300px">
+    <h3>輸入編輯密碼</h3>
+    <input type="password" id="pwInput" placeholder="密碼" onkeydown="if(event.key==='Enter')confirmPassword()">
+    <div id="pwError" class="modal-status err" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="mbtn" onclick="closePwModal()">取消</button>
+      <button class="mbtn primary" onclick="confirmPassword()">確認</button>
     </div>
   </div>
 </div>
@@ -320,7 +332,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.4';
+const VERSION      = 'v1.5';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -334,32 +346,17 @@ let renameId    = null;
 let accessToken = null;
 let selectedIds = new Set();
 let dragData        = null; // payload for card→sidebar moves (avoids dataTransfer MIME quirks)
-let currentUserEmail= null;
-let isEditMode      = false;
+let isEditMode = false;
 
-const EDIT_EMAILS = new Set([
-  'gp.lee@neutec.com.tw','yen@neutec.com.tw','elicia.chang@neutec.com.tw',
-  'leia.cheng@neutec.com.tw','wenbin.chang@neutec.com.tw','flora.lu@neutec.com.tw',
-  'dio.hsu@neutec.com.tw','woods.lin@neutec.com.tw','martin.tseng@neutec.com.tw',
-  'kazma.chen@neutec.com.tw','darkisu.su@neutec.com.tw','owen.huang@neutec.com.tw',
-  'hanwei.huang@neutec.com.tw','kev.hsiao@neutec.com.tw','sephira.jiang@neutec.com.tw',
-  'ken.chen@neutec.com.tw','richard.chen@neutec.com.tw','achen.lin@neutec.com.tw',
-  'tsaichieh.chen@neutec.com.tw','yifan.chen@neutec.com.tw','lichung.huang@neutec.com.tw',
-  'stephen.tsai@neutec.com.tw','sheng.chen@neutec.com.tw','brian.huang@neutec.com.tw',
-  'yihsin.wang@neutec.com.tw'
-]);
+const EDIT_PASSWORD = 'pr1'; // 不分大小寫
 
 function applyPermissionMode(){
   if(isEditMode){
     document.body.classList.remove('view-mode');
-    const u=document.getElementById('authUser');
-    u.textContent=currentUserEmail; u.style.display='inline';
     const btn=document.getElementById('authBtn');
-    btn.textContent='登出'; btn.classList.add('edit-active');
+    btn.textContent='離開編輯'; btn.classList.add('edit-active');
   } else {
     document.body.classList.add('view-mode');
-    const u=document.getElementById('authUser');
-    u.style.display='none';
     const btn=document.getElementById('authBtn');
     btn.textContent='登入以編輯'; btn.classList.remove('edit-active');
   }
@@ -367,30 +364,34 @@ function applyPermissionMode(){
   if(currentFiles.length) renderGrid(currentFiles);
 }
 
-async function handleAuthClick(){
+function handleAuthClick(){
   if(isEditMode){
-    accessToken=null; currentUserEmail=null; isEditMode=false;
-    applyPermissionMode();
-    return;
+    isEditMode=false; applyPermissionMode(); return;
   }
-  const btn=document.getElementById('authBtn');
-  btn.textContent='登入中...'; btn.disabled=true;
-  try{
-    const token=await ensureAccessToken();
-    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
-      {headers:{'Authorization':'Bearer '+token}});
-    const u=await r.json();
-    if(EDIT_EMAILS.has(u.email)){
-      currentUserEmail=u.email; isEditMode=true;
-      applyPermissionMode();
-    } else {
-      accessToken=null;
-      alert(`${u.email} 沒有編輯權限。`);
-      btn.textContent='登入以編輯'; btn.disabled=false;
-    }
-  }catch(e){
-    alert('登入失敗：'+e.message);
-    btn.textContent='登入以編輯'; btn.disabled=false;
+  showPasswordModal();
+}
+
+function showPasswordModal(){
+  document.getElementById('pwInput').value='';
+  document.getElementById('pwError').style.display='none';
+  document.getElementById('pwModal').style.display='flex';
+  setTimeout(()=>document.getElementById('pwInput').focus(),50);
+}
+
+function closePwModal(){
+  document.getElementById('pwModal').style.display='none';
+}
+
+function confirmPassword(){
+  const val=document.getElementById('pwInput').value.trim().toLowerCase();
+  if(val===EDIT_PASSWORD){
+    closePwModal();
+    isEditMode=true; applyPermissionMode();
+  } else {
+    const err=document.getElementById('pwError');
+    err.textContent='密碼錯誤，請再試一次。';
+    err.style.display='block';
+    document.getElementById('pwInput').select();
   }
 }
 
