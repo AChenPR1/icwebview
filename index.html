@@ -148,6 +148,20 @@
   .mbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
   .mbtn.primary:hover{background:var(--accent2);}
   .mbtn:disabled{opacity:.4;cursor:default;pointer-events:none;}
+  /* multi-select */
+  .card-check{position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;opacity:0;transition:opacity .12s,background .12s,border-color .12s;padding:0;}
+  .icon-card:hover .card-check,.card-check.checked{opacity:1;}
+  .card-check.checked{background:var(--accent);border-color:var(--accent);}
+  .card-check svg{display:none;pointer-events:none;}
+  .card-check.checked svg{display:block;}
+  .icon-card.selected{border-color:var(--accent) !important;background:var(--accent-bg) !important;}
+  .bulk-action-bar{display:none;align-items:center;gap:10px;padding:6px 20px;background:rgba(124,106,247,.06);border-bottom:1px solid rgba(124,106,247,.3);flex-shrink:0;}
+  .bulk-action-bar.show{display:flex;}
+  .bulk-count{font-size:13px;color:var(--accent);flex:1;font-weight:500;}
+  .bulk-del-btn{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:var(--radius);background:rgba(224,92,92,.1);border:1px solid var(--danger);color:var(--danger);font-size:13px;cursor:pointer;transition:background .12s;}
+  .bulk-del-btn:hover{background:rgba(224,92,92,.22);}
+  .bulk-clear-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius);background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;transition:background .12s;}
+  .bulk-clear-btn:hover{background:var(--bg3);}
 </style>
 </head>
 <body>
@@ -199,6 +213,14 @@
         <div class="upload-progress" id="uploadProgress"></div>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFileInput(this.files)">
         <input type="file" id="folderInput" webkitdirectory mozdirectory multiple style="display:none" onchange="handleFileInput(this.files)">
+      </div>
+      <div class="bulk-action-bar" id="bulkActionBar">
+        <span class="bulk-count" id="bulkCount"></span>
+        <button class="bulk-clear-btn" onclick="clearSelection()">取消選取</button>
+        <button class="bulk-del-btn" onclick="deleteBulkSelected()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          刪除選取
+        </button>
       </div>
       <div class="grid-area" id="gridArea"><div class="nosel"><div class="bi">🗂️</div><p>從左側選擇一個資料夾</p></div></div>
     </div>
@@ -292,6 +314,7 @@ let lbIndex     = -1;
 let lbFiles     = [];
 let renameId    = null;
 let accessToken = null;
+let selectedIds = new Set();
 
 function saveCategories(){ try{ localStorage.setItem('igc', JSON.stringify(categories.filter(f=>!f.isAuto))); }catch(e){} }
 function loadSaved(){
@@ -416,6 +439,7 @@ function renderSidebar(){
 function selectFolderById(id){ const f=categories.find(x=>x.id===id); if(f) selectFolder(f); }
 
 async function selectFolder(f){
+  selectedIds.clear(); updateBulkBar();
   currentFolder=f;
   document.getElementById('mainTitle').textContent=f.name;
   document.getElementById('mainSub').textContent='載入中...';
@@ -551,7 +575,10 @@ function renderGrid(files){
   let h='<div class="icon-grid '+(viewMode==='list'?'lv':'')+'" id="iconGrid">';
   files.forEach((f,i)=>{
     const ext=(f.name.split('.').pop()||'').toUpperCase();
-    h+=`<div class="icon-card" onclick="openLb(${i})" style="position:relative">
+    h+=`<div class="icon-card${selectedIds.has(f.id)?' selected':''}" onclick="openLb(${i})" style="position:relative">
+      <button class="card-check${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+      </button>
       <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
       <div class="thumb">
         <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
@@ -788,7 +815,10 @@ function appendCardToGrid(f, i){
   div.className = 'icon-card';
   div.style.position = 'relative';
   div.onclick = () => openLb(i);
-  div.innerHTML = `<button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+  div.innerHTML = `<button class="card-check" id="chk-${f.id}" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+    </button>
+    <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
     <div class="thumb">
       <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
@@ -858,16 +888,60 @@ async function readDropItems(items){
   return files;
 }
 
+// ── Multi-select ──────────────────────────────────────────────────────────────
+function toggleSelect(id){
+  if(selectedIds.has(id)){ selectedIds.delete(id); } else { selectedIds.add(id); }
+  const check=document.getElementById('chk-'+id);
+  const card=check&&check.closest('.icon-card');
+  if(check) check.classList.toggle('checked', selectedIds.has(id));
+  if(card)  card.classList.toggle('selected', selectedIds.has(id));
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  const bar=document.getElementById('bulkActionBar');
+  const cnt=document.getElementById('bulkCount');
+  if(!bar) return;
+  if(selectedIds.size>0){
+    bar.classList.add('show');
+    cnt.textContent='已選取 '+selectedIds.size+' 個圖示';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+function clearSelection(){
+  selectedIds.forEach(id=>{
+    const check=document.getElementById('chk-'+id);
+    const card=check&&check.closest('.icon-card');
+    if(check) check.classList.remove('checked');
+    if(card)  card.classList.remove('selected');
+  });
+  selectedIds.clear();
+  updateBulkBar();
+}
+
+function deleteBulkSelected(){
+  if(!selectedIds.size) return;
+  showDeleteModal('bulk', null, '共 '+selectedIds.size+' 個圖檔');
+}
+
 // ── Delete modal ─────────────────────────────────────────────────────────────
-let deleteTarget = null; // {type:'file'|'folder', id, name}
+let deleteTarget = null; // {type:'file'|'folder'|'bulk', id, name}
 
 function showDeleteModal(type, id, name){
   deleteTarget={type,id,name};
-  document.getElementById('deleteModalTitle').textContent = type==='folder' ? '刪除資料夾' : '刪除圖檔';
-  document.getElementById('deleteTargetName').textContent = name;
-  document.getElementById('deleteWarning').textContent = type==='folder'
-    ? '這將永久刪除 Google Drive 上的資料夾及其所有內容，無法復原！'
-    : '這將永久刪除 Google Drive 上的圖檔，無法復原！';
+  if(type==='bulk'){
+    document.getElementById('deleteModalTitle').textContent='刪除選取的圖檔';
+    document.getElementById('deleteTargetName').textContent='共 '+selectedIds.size+' 個圖檔將被刪除';
+    document.getElementById('deleteWarning').textContent='這將永久刪除 Google Drive 上選取的所有圖檔，無法復原！';
+  } else {
+    document.getElementById('deleteModalTitle').textContent = type==='folder' ? '刪除資料夾' : '刪除圖檔';
+    document.getElementById('deleteTargetName').textContent = name;
+    document.getElementById('deleteWarning').textContent = type==='folder'
+      ? '這將永久刪除 Google Drive 上的資料夾及其所有內容，無法復原！'
+      : '這將永久刪除 Google Drive 上的圖檔，無法復原！';
+  }
   document.getElementById('deleteStatus').textContent='';
   document.getElementById('deleteConfirmBtn').disabled=false;
   document.getElementById('deleteCancelBtn').disabled=false;
@@ -886,6 +960,34 @@ async function confirmDelete(){
   const confirmBtn=document.getElementById('deleteConfirmBtn');
   const cancelBtn=document.getElementById('deleteCancelBtn');
   confirmBtn.disabled=true; cancelBtn.disabled=true;
+
+  if(type==='bulk'){
+    const ids=Array.from(selectedIds);
+    let done=0, failed=0;
+    status.textContent='正在授權並刪除...';
+    try{ await ensureAccessToken(); }catch(e){ status.textContent='✗ 授權失敗：'+e.message; confirmBtn.disabled=false; cancelBtn.disabled=false; return; }
+    for(const fid of ids){
+      try{
+        await deleteDriveItem(fid);
+        done++;
+        status.textContent='已刪除 '+done+' / '+ids.length+'...';
+        currentFiles=currentFiles.filter(f=>f.id!==fid);
+        lbFiles=lbFiles.filter(f=>f.id!==fid);
+        delete fileMap[fid];
+        selectedIds.delete(fid);
+        const img=document.getElementById('img-'+fid);
+        if(img){ const card=img.closest('.icon-card'); if(card) card.remove(); }
+      }catch(e){ failed++; }
+    }
+    hideDeleteModal();
+    updateBulkBar();
+    const el=document.getElementById('count-'+(currentFolder&&currentFolder.id));
+    if(el) el.textContent=currentFiles.length;
+    document.getElementById('mainSub').textContent=currentFiles.length+' 個圖示';
+    if(failed) setTimeout(()=>alert(failed+' 個檔案刪除失敗'),100);
+    return;
+  }
+
   status.textContent='正在授權並刪除...';
   try{
     await deleteDriveItem(id);
@@ -893,14 +995,12 @@ async function confirmDelete(){
     if(type==='folder'){
       removeFolderFromSidebar(id);
     } else {
-      // Remove from currentFiles and re-render
       currentFiles=currentFiles.filter(f=>f.id!==id);
       lbFiles=lbFiles.filter(f=>f.id!==id);
       delete fileMap[id];
       const el=document.getElementById('count-'+(currentFolder&&currentFolder.id));
       if(el) el.textContent=currentFiles.length;
       document.getElementById('mainSub').textContent=currentFiles.length+' 個圖示';
-      // Remove card from DOM directly
       const img=document.getElementById('img-'+id);
       if(img){
         const card=img.closest('.icon-card');
