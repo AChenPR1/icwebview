@@ -760,7 +760,11 @@ async function uploadFolderStructure(imgFiles){
 
   // 取得根資料夾名稱（webkitRelativePath 第一段）
   const rootFolderName = imgFiles[0].webkitRelativePath.split('/')[0];
-  if(!rootFolderName){ processUploadFiles(imgFiles); return; }
+  if(!rootFolderName){
+    alert('無法取得資料夾名稱，請重新選擇資料夾。');
+    hint.textContent='選擇資料夾後可拖曳圖檔至此上傳';
+    return;
+  }
 
   // 授權
   hint.textContent='正在授權...';
