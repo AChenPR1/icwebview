@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.0</title>
+<title>Idel Casino圖庫 v1.1</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -172,7 +172,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.0</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.1</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -309,7 +309,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.0';
+const VERSION      = 'v1.1';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -322,8 +322,19 @@ let lbFiles     = [];
 let renameId    = null;
 let accessToken = null;
 let selectedIds = new Set();
+let dragData    = null; // payload for card→sidebar moves (avoids dataTransfer MIME quirks)
 
 function saveCategories(){ try{ localStorage.setItem('igc', JSON.stringify(categories.filter(f=>!f.isAuto))); }catch(e){} }
+
+async function loadAllFolderCounts(){
+  await Promise.all(categories.map(async f=>{
+    try{
+      const imgs=await fetchImages(f.id);
+      const el=document.getElementById('count-'+f.id);
+      if(el) el.textContent=imgs.length;
+    }catch(e){}
+  }));
+}
 function loadSaved(){
   try{
     const s=localStorage.getItem('igc');
@@ -341,6 +352,7 @@ function loadSaved(){
     categories = subs;
     loadSaved();
     renderSidebar();
+    loadAllFolderCounts(); // background — don't await
     if(categories.length>0) await selectFolder(categories[0]);
   }catch(e){
     document.getElementById('folderList').innerHTML='<div style="padding:16px;font-size:14px;color:var(--danger);text-align:center">'+esc(e.message)+'</div>';
@@ -589,7 +601,7 @@ function renderGrid(files){
       <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
       <div class="thumb">
         <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
+        <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
       </div>
       <div class="iname">${esc(f.name)}</div>
       <div class="ires" id="res-${f.id}"></div>
@@ -955,7 +967,7 @@ function appendCardToGrid(f, i){
     <button class="card-del-btn" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
     <div class="thumb">
       <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-      <img id="img-${f.id}" alt="${esc(f.name)}" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
+      <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
     </div>
     <div class="iname">${esc(f.name)}</div>
     <div class="ires" id="res-${f.id}"></div>`;
@@ -991,12 +1003,12 @@ function appendCardToGrid(f, i){
     dragCount--;
     if(dragCount===0) document.getElementById('dropOverlay').classList.remove('show');
   });
-  // Only preventDefault for filesystem drags; internal card drags let folder items handle it
+  // Card drags use dragData global; only preventDefault for filesystem drops
   document.addEventListener('dragover', e=>{
-    if(!e.dataTransfer.types.includes('text/x-icon-ids')) e.preventDefault();
+    if(!dragData) e.preventDefault();
   });
   document.addEventListener('drop', async e=>{
-    if(e.dataTransfer.types.includes('text/x-icon-ids')) return; // handled by sidebar folders
+    if(dragData){ dragData=null; return; } // icon drag landed outside a folder → cancel
     e.preventDefault(); dragCount=0;
     document.getElementById('dropOverlay').classList.remove('show');
     const items = Array.from(e.dataTransfer.items||[]);
@@ -1004,10 +1016,14 @@ function appendCardToGrid(f, i){
       try{ return item.webkitGetAsEntry()?.isDirectory; }catch(ex){ return false; }
     });
     if(hasFolder && items[0]?.webkitGetAsEntry){
-      // Folder drop → create folder structure
+      // Folder drop → group by root folder, create each separately
       const files = await readDropItemsWithPaths(items);
       const imgs = files.filter(isImageFile);
-      if(imgs.length) uploadFolderStructure(imgs);
+      if(imgs.length){
+        const groups={};
+        imgs.forEach(f=>{ const r=(f._dropRelPath||f.name).split('/')[0]; (groups[r]||(groups[r]=[])).push(f); });
+        for(const grp of Object.values(groups)) await uploadFolderStructure(grp);
+      }
     } else {
       if(!currentFolder){ alert('請先選擇一個資料夾再拖曳上傳'); return; }
       if(items.length && items[0].webkitGetAsEntry){
@@ -1081,15 +1097,16 @@ async function readDropItemsWithPaths(items){
 
 // ── Card drag (grid → sidebar move) ──────────────────────────────────────────
 function startCardDrag(e, fileId){
-  // Drag all selected if this card is in selection, otherwise just this card
   const ids=(selectedIds.size>0&&selectedIds.has(fileId)) ? Array.from(selectedIds) : [fileId];
-  e.dataTransfer.setData('text/x-icon-ids', JSON.stringify(ids));
+  dragData=ids; // store globally — avoids dataTransfer MIME type issues cross-browser
+  e.dataTransfer.setData('text/plain','icon-drag'); // minimal payload to satisfy browsers
   e.dataTransfer.effectAllowed='move';
   ids.forEach(id=>{
     const img=document.getElementById('img-'+id);
     if(img){ const card=img.closest('.icon-card'); if(card) card.classList.add('drag-src'); }
   });
   const cleanup=()=>{
+    dragData=null;
     ids.forEach(id=>{
       const img=document.getElementById('img-'+id);
       if(img){ const card=img.closest('.icon-card'); if(card) card.classList.remove('drag-src'); }
@@ -1100,24 +1117,24 @@ function startCardDrag(e, fileId){
 }
 
 function folderDragOver(e, folderId){
-  if(!e.dataTransfer.types.includes('text/x-icon-ids')) return;
+  if(!dragData) return; // not a card drag
   e.preventDefault(); e.stopPropagation();
   e.dataTransfer.dropEffect='move';
   document.querySelectorAll('.folder-item.drop-hover').forEach(el=>el.classList.remove('drop-hover'));
-  e.currentTarget.classList.add('drop-hover');
+  (e.currentTarget||e.target.closest('.folder-item')).classList.add('drop-hover');
 }
 
 function folderDragLeave(e, folderId){
-  if(!e.relatedTarget||!e.currentTarget.contains(e.relatedTarget))
-    e.currentTarget.classList.remove('drop-hover');
+  const el=e.currentTarget||e.target.closest('.folder-item');
+  if(el&&(!e.relatedTarget||!el.contains(e.relatedTarget))) el.classList.remove('drop-hover');
 }
 
 function folderDrop(e, folderId){
   e.preventDefault(); e.stopPropagation();
-  e.currentTarget.classList.remove('drop-hover');
-  const raw=e.dataTransfer.getData('text/x-icon-ids');
-  if(!raw) return;
-  try{ const ids=JSON.parse(raw); if(ids.length) moveFilesToFolder(ids,folderId); }catch(ex){}
+  (e.currentTarget||e.target.closest('.folder-item'))?.classList.remove('drop-hover');
+  if(!dragData) return;
+  const ids=dragData; dragData=null;
+  if(ids.length) moveFilesToFolder(ids,folderId);
 }
 
 async function moveFilesToFolder(ids, targetFolderId){
@@ -1146,6 +1163,8 @@ async function moveFilesToFolder(ids, targetFolderId){
   }
   const el=document.getElementById('count-'+oldFolderId);
   if(el) el.textContent=currentFiles.length;
+  const tel=document.getElementById('count-'+targetFolderId);
+  if(tel){ const n=parseInt(tel.textContent)||0; tel.textContent=n+moved; }
   document.getElementById('mainSub').textContent=currentFiles.length+' 個圖示';
   updateBulkBar();
   hint.textContent=moved ? '已移動 '+moved+' 個圖示' : '移動失敗';
