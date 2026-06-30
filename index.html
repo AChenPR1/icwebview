@@ -212,7 +212,7 @@
         <span class="upload-hint" id="uploadHint">選擇資料夾後可拖曳圖檔至此上傳</span>
         <div class="upload-progress" id="uploadProgress"></div>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFileInput(this.files)">
-        <input type="file" id="folderInput" webkitdirectory mozdirectory multiple style="display:none" onchange="handleFileInput(this.files)">
+        <input type="file" id="folderInput" webkitdirectory mozdirectory multiple style="display:none" onchange="handleFolderInput(this.files)">
       </div>
       <div class="bulk-action-bar" id="bulkActionBar">
         <span class="bulk-count" id="bulkCount"></span>
@@ -717,7 +717,6 @@ function triggerUpload(){
 }
 
 function triggerFolderUpload(){
-  if(!currentFolder){ alert('請先選擇一個資料夾'); return; }
   document.getElementById('folderInput').click();
 }
 
@@ -746,6 +745,126 @@ function handleFileInput(files){
     return;
   }
   processUploadFiles(imgs);
+}
+
+function handleFolderInput(files){
+  if(!files||!files.length) return;
+  const imgs = Array.from(files).filter(isImageFile);
+  if(!imgs.length){ alert('未找到任何圖片檔案'); return; }
+  uploadFolderStructure(imgs);
+}
+
+async function uploadFolderStructure(imgFiles){
+  const hint = document.getElementById('uploadHint');
+  const progress = document.getElementById('uploadProgress');
+
+  // 取得根資料夾名稱（webkitRelativePath 第一段）
+  const rootFolderName = imgFiles[0].webkitRelativePath.split('/')[0];
+  if(!rootFolderName){ processUploadFiles(imgFiles); return; }
+
+  // 授權
+  hint.textContent='正在授權...';
+  hint.style.display='';
+  try{ await ensureAccessToken(); }catch(e){ alert('授權失敗：'+e.message); hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; return; }
+
+  // 找或建立根資料夾
+  let rootFolder = categories.find(f=>f.name===rootFolderName);
+  if(!rootFolder){
+    hint.textContent='正在建立資料夾「'+rootFolderName+'」...';
+    try{
+      const created = await createDriveFolder(rootFolderName, ROOT_ID);
+      rootFolder = {id:created.id, name:created.name, parentName:ROOT_NAME, isAuto:false};
+      categories.push(rootFolder);
+      saveCategories();
+      renderSidebar();
+    }catch(e){ alert('建立資料夾失敗：'+e.message); hint.textContent='選擇資料夾後可拖曳圖檔至此上傳'; return; }
+  }
+
+  // 切換到該資料夾
+  await selectFolder(rootFolder);
+
+  // 蒐集所有子路徑（相對於根資料夾，不含檔名）
+  const subPathSet = new Set();
+  imgFiles.forEach(f=>{
+    const parts = f.webkitRelativePath.split('/');
+    for(let d=1; d<parts.length-1; d++){
+      subPathSet.add(parts.slice(1,d+1).join('/'));
+    }
+  });
+
+  // 由淺到深建立子資料夾，並記錄路徑→Drive ID 的對應
+  const folderIdMap = {'': rootFolder.id};
+  const sortedPaths = Array.from(subPathSet).sort((a,b)=>{
+    const da=a.split('/').length, db=b.split('/').length;
+    return da!==db ? da-db : a.localeCompare(b);
+  });
+  for(const path of sortedPaths){
+    const parts = path.split('/');
+    const parentPath = parts.slice(0,-1).join('/');
+    const parentId = folderIdMap[parentPath]||rootFolder.id;
+    const folderName = parts[parts.length-1];
+    hint.textContent='正在建立子資料夾「'+folderName+'」...';
+    try{
+      const created = await createDriveFolder(folderName, parentId);
+      folderIdMap[path] = created.id;
+    }catch(e){
+      folderIdMap[path] = parentId; // 建立失敗則退回父層
+    }
+  }
+
+  // 建立進度列
+  hint.style.display='none';
+  const rows = {};
+  imgFiles.forEach(f=>{
+    const uid = 'up-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    rows[f.webkitRelativePath] = uid;
+    const label = f.webkitRelativePath.split('/').slice(1).join('/');
+    progress.insertAdjacentHTML('beforeend',
+      `<div class="up-item" id="${uid}">
+        <span class="up-name">${esc(label)}</span>
+        <div class="up-bar"><div class="up-fill" id="fill-${uid}" style="width:0%"></div></div>
+        <span class="up-st" id="st-${uid}">0%</span>
+      </div>`);
+  });
+
+  // 並行上傳所有圖檔
+  await Promise.all(imgFiles.map(async file=>{
+    const parts = file.webkitRelativePath.split('/');
+    const subPath = parts.slice(1,-1).join('/');
+    const targetId = folderIdMap[subPath]||rootFolder.id;
+    const rowId = rows[file.webkitRelativePath];
+    try{
+      const created = await uploadFileToDrive(file, targetId, pct=>{
+        const fill=document.getElementById('fill-'+rowId);
+        const st=document.getElementById('st-'+rowId);
+        if(fill) fill.style.width=Math.round(pct*100)+'%';
+        if(st) st.textContent=Math.round(pct*100)+'%';
+      });
+      const st=document.getElementById('st-'+rowId);
+      if(st){ st.textContent='✓'; st.style.color='#4caf82'; }
+      // 只有屬於根資料夾的圖檔才即時加進目前格格
+      if(targetId===rootFolder.id){
+        const newFile={id:created.id, name:created.name, mimeType:created.mimeType};
+        fileMap[created.id]=newFile;
+        currentFiles.push(newFile);
+        lbFiles=currentFiles;
+        const countEl=document.getElementById('count-'+rootFolder.id);
+        if(countEl) countEl.textContent=currentFiles.length;
+        document.getElementById('mainSub').textContent=currentFiles.length+' 個圖示';
+        appendCardToGrid(newFile, currentFiles.length-1);
+      }
+    }catch(e){
+      const st=document.getElementById('st-'+rowId);
+      if(st){ st.textContent='✗'; st.style.color='var(--danger)'; st.title=e.message; }
+    }
+  }));
+
+  setTimeout(()=>{
+    progress.innerHTML='';
+    hint.style.display='';
+    hint.textContent='選擇資料夾後可拖曳圖檔至此上傳';
+    hint.style.color='';
+  }, 3000);
 }
 
 async function processUploadFiles(files){
