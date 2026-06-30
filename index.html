@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.6</title>
+<title>Idel Casino圖庫 v1.7</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -179,7 +179,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.6</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.7</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -194,7 +194,6 @@
     <div class="sidebar">
       <div class="sidebar-header">資料夾 <button class="add-btn edit-only" onclick="showAddModal()" title="新增資料夾">＋</button></div>
       <div class="folder-list" id="folderList"><div class="st-load" style="height:120px"><div class="spinner"></div><p style="font-size:14px">讀取中...</p></div></div>
-      <div class="sidebar-footer edit-only"><a onclick="showAddModal()">＋ 新增資料夾</a></div>
     </div>
     <div class="main">
       <div class="main-header">
@@ -332,7 +331,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.6';
+const VERSION      = 'v1.7';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -433,7 +432,6 @@ function loadSaved(){
     loadSaved();
     renderSidebar();
     loadAllFolderCounts(); // background — don't await
-    if(categories.length>0) await selectFolder(categories[0]);
   }catch(e){
     document.getElementById('folderList').innerHTML='<div style="padding:16px;font-size:14px;color:var(--danger);text-align:center">'+esc(e.message)+'</div>';
   }
