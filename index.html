@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.2</title>
+<title>Idel Casino圖庫 v1.3</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -162,6 +162,13 @@
   .bulk-del-btn:hover{background:rgba(224,92,92,.22);}
   .bulk-clear-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius);background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;transition:background .12s;}
   .bulk-clear-btn:hover{background:var(--bg3);}
+  /* permission mode */
+  body.view-mode .edit-only{display:none !important;}
+  .topbar-auth{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;}
+  .auth-user{font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .auth-btn{padding:4px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:background .12s,color .12s;}
+  .auth-btn:hover{background:var(--bg3);color:var(--text);}
+  .auth-btn.edit-active{border-color:var(--accent);color:var(--accent);}
   /* folder drop target / card drag */
   .folder-item.drop-hover{background:rgba(124,106,247,.22) !important;outline:2px dashed var(--accent);outline-offset:-2px;}
   .icon-card.drag-src{opacity:.35;}
@@ -172,19 +179,23 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.2</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.3</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
       <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="搜尋圖示名稱..." oninput="filterIcons()">
     </div>
+    <div class="topbar-auth">
+      <span class="auth-user" id="authUser" style="display:none"></span>
+      <button class="auth-btn" id="authBtn" onclick="handleAuthClick()">登入以編輯</button>
+    </div>
   </div>
   <div class="body">
     <div class="sidebar">
-      <div class="sidebar-header">資料夾 <button class="add-btn" onclick="showAddModal()" title="新增資料夾">＋</button></div>
+      <div class="sidebar-header">資料夾 <button class="add-btn edit-only" onclick="showAddModal()" title="新增資料夾">＋</button></div>
       <div class="folder-list" id="folderList"><div class="st-load" style="height:120px"><div class="spinner"></div><p style="font-size:14px">讀取中...</p></div></div>
-      <div class="sidebar-footer"><a onclick="showAddModal()">＋ 新增資料夾</a></div>
+      <div class="sidebar-footer edit-only"><a onclick="showAddModal()">＋ 新增資料夾</a></div>
     </div>
     <div class="main">
       <div class="main-header">
@@ -203,7 +214,7 @@
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="7" height="7" rx="1"/><rect x="9" y="0" width="7" height="7" rx="1"/><rect x="0" y="9" width="7" height="7" rx="1"/><rect x="9" y="9" width="7" height="7" rx="1"/></svg>
         </div>
       </div>
-      <div class="upload-bar" id="uploadBar">
+      <div class="upload-bar edit-only" id="uploadBar">
         <button class="upload-btn" onclick="triggerUpload()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           上傳圖檔
@@ -220,7 +231,7 @@
       <div class="bulk-action-bar" id="bulkActionBar">
         <span class="bulk-count" id="bulkCount"></span>
         <button class="bulk-clear-btn" onclick="clearSelection()">取消選取</button>
-        <button class="bulk-del-btn" onclick="deleteBulkSelected()">
+        <button class="bulk-del-btn edit-only" onclick="deleteBulkSelected()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           刪除選取
         </button>
@@ -309,7 +320,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.2';
+const VERSION      = 'v1.3';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -322,7 +333,66 @@ let lbFiles     = [];
 let renameId    = null;
 let accessToken = null;
 let selectedIds = new Set();
-let dragData    = null; // payload for card→sidebar moves (avoids dataTransfer MIME quirks)
+let dragData        = null; // payload for card→sidebar moves (avoids dataTransfer MIME quirks)
+let currentUserEmail= null;
+let isEditMode      = false;
+
+const EDIT_EMAILS = new Set([
+  'gp.lee@neutec.com.tw','yen@neutec.com.tw','elicia.chang@neutec.com.tw',
+  'leia.cheng@neutec.com.tw','wenbin.chang@neutec.com.tw','flora.lu@neutec.com.tw',
+  'dio.hsu@neutec.com.tw','woods.lin@neutec.com.tw','martin.tseng@neutec.com.tw',
+  'kazma.chen@neutec.com.tw','darkisu.su@neutec.com.tw','owen.huang@neutec.com.tw',
+  'hanwei.huang@neutec.com.tw','kev.hsiao@neutec.com.tw','sephira.jiang@neutec.com.tw',
+  'ken.chen@neutec.com.tw','richard.chen@neutec.com.tw','achen.lin@neutec.com.tw',
+  'tsaichieh.chen@neutec.com.tw','yifan.chen@neutec.com.tw','lichung.huang@neutec.com.tw',
+  'stephen.tsai@neutec.com.tw','sheng.chen@neutec.com.tw','brian.huang@neutec.com.tw',
+  'yihsin.wang@neutec.com.tw'
+]);
+
+function applyPermissionMode(){
+  if(isEditMode){
+    document.body.classList.remove('view-mode');
+    const u=document.getElementById('authUser');
+    u.textContent=currentUserEmail; u.style.display='inline';
+    const btn=document.getElementById('authBtn');
+    btn.textContent='登出'; btn.classList.add('edit-active');
+  } else {
+    document.body.classList.add('view-mode');
+    const u=document.getElementById('authUser');
+    u.style.display='none';
+    const btn=document.getElementById('authBtn');
+    btn.textContent='登入以編輯'; btn.classList.remove('edit-active');
+  }
+  renderSidebar();
+  if(currentFiles.length) renderGrid(currentFiles);
+}
+
+async function handleAuthClick(){
+  if(isEditMode){
+    accessToken=null; currentUserEmail=null; isEditMode=false;
+    applyPermissionMode();
+    return;
+  }
+  const btn=document.getElementById('authBtn');
+  btn.textContent='登入中...'; btn.disabled=true;
+  try{
+    const token=await ensureAccessToken();
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+      {headers:{'Authorization':'Bearer '+token}});
+    const u=await r.json();
+    if(EDIT_EMAILS.has(u.email)){
+      currentUserEmail=u.email; isEditMode=true;
+      applyPermissionMode();
+    } else {
+      accessToken=null;
+      alert(`${u.email} 沒有編輯權限。`);
+      btn.textContent='登入以編輯'; btn.disabled=false;
+    }
+  }catch(e){
+    alert('登入失敗：'+e.message);
+    btn.textContent='登入以編輯'; btn.disabled=false;
+  }
+}
 
 function saveCategories(){ try{ localStorage.setItem('igc', JSON.stringify(categories.filter(f=>!f.isAuto))); }catch(e){} }
 
@@ -345,6 +415,7 @@ function loadSaved(){
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 (async function init(){
+  document.body.classList.add('view-mode');
   document.getElementById('rootFolderHint').textContent = ROOT_NAME;
   document.addEventListener('keydown', onKey);
   try{ const s=localStorage.getItem('igt'); if(s){ document.getElementById('sizeSlider').value=s; updateThumbSize(s); } }catch(e){}
@@ -447,8 +518,8 @@ function renderSidebar(){
       <span style="font-size:16px;flex-shrink:0;opacity:.7">📁</span>
       <span class="folder-label">${esc(f.name)}</span>
       <div class="folder-actions">
-        <button class="fac r" onclick="event.stopPropagation();showRenameModal('${f.id}')" title="重新命名">✏</button>
-        <button class="fac d" onclick="event.stopPropagation();deleteFolder('${f.id}')" title="刪除">✕</button>
+        <button class="fac r edit-only" onclick="event.stopPropagation();showRenameModal('${f.id}')" title="重新命名">✏</button>
+        <button class="fac d edit-only" onclick="event.stopPropagation();deleteFolder('${f.id}')" title="刪除">✕</button>
       </div>
       <span class="folder-count" id="count-${f.id}">${f._count!==undefined?f._count:'—'}</span>
     </div>`;
@@ -597,10 +668,10 @@ function renderGrid(files){
   files.forEach((f,i)=>{
     const ext=(f.name.split('.').pop()||'').toUpperCase();
     h+=`<div class="icon-card${selectedIds.has(f.id)?' selected':''}" draggable="true" ondragstart="startCardDrag(event,'${f.id}')" onclick="openLb(${i})" style="position:relative">
-      <button class="card-check${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+      <button class="card-check edit-only${selectedIds.has(f.id)?' checked':''}" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
       </button>
-      <button class="card-del-btn" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+      <button class="card-del-btn edit-only" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
       <div class="thumb">
         <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
@@ -963,10 +1034,10 @@ function appendCardToGrid(f, i){
   div.draggable = true;
   div.addEventListener('dragstart', e => startCardDrag(e, f.id));
   div.onclick = () => openLb(i);
-  div.innerHTML = `<button class="card-check" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
+  div.innerHTML = `<button class="card-check edit-only" id="chk-${f.id}" draggable="false" onclick="event.stopPropagation();toggleSelect('${f.id}')" title="選取">
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
     </button>
-    <button class="card-del-btn" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
+    <button class="card-del-btn edit-only" draggable="false" onclick="event.stopPropagation();deleteFile('${f.id}','${esc(f.name)}')" title="刪除圖檔">✕</button>
     <div class="thumb">
       <svg id="ph-${f.id}" class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <img id="img-${f.id}" alt="${esc(f.name)}" draggable="false" style="display:none;width:100%;height:100%;object-fit:contain;image-rendering:pixelated">
@@ -1011,6 +1082,7 @@ function appendCardToGrid(f, i){
   });
   document.addEventListener('drop', async e=>{
     if(dragData){ dragData=null; return; } // icon drag landed outside a folder → cancel
+    if(!isEditMode){ e.preventDefault(); dragCount=0; document.getElementById('dropOverlay').classList.remove('show'); return; }
     e.preventDefault(); dragCount=0;
     document.getElementById('dropOverlay').classList.remove('show');
     const items = Array.from(e.dataTransfer.items||[]);
@@ -1124,7 +1196,7 @@ function startCardDrag(e, fileId){
 }
 
 function folderDragOver(e, folderId){
-  if(!dragData) return; // not a card drag
+  if(!dragData||!isEditMode) return; // not a card drag or no edit permission
   e.preventDefault(); e.stopPropagation();
   e.dataTransfer.dropEffect='move';
   document.querySelectorAll('.folder-item.drop-hover').forEach(el=>el.classList.remove('drop-hover'));
@@ -1139,7 +1211,7 @@ function folderDragLeave(e, folderId){
 function folderDrop(e, folderId){
   e.preventDefault(); e.stopPropagation();
   (e.currentTarget||e.target.closest('.folder-item'))?.classList.remove('drop-hover');
-  if(!dragData) return;
+  if(!dragData||!isEditMode) return;
   const ids=dragData; dragData=null;
   if(ids.length) moveFilesToFolder(ids,folderId);
 }
