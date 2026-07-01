@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v1.7</title>
+<title>Idel Casino圖庫 v1.8</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -179,7 +179,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.7</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v1.8</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -331,7 +331,7 @@ const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleu
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v1.7';
+const VERSION      = 'v1.8';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -503,11 +503,12 @@ async function createDriveFolder(name, parentId){
 
 async function deleteDriveItem(id){
   const token=await ensureAccessToken();
-  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${id}`,{
-    method:'DELETE',
-    headers:{'Authorization':'Bearer '+token}
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id`,{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({trashed:true})
   });
-  if(res.status!==204&&res.status!==200){
+  if(!res.ok){
     const d=await res.json().catch(()=>({}));
     throw new Error((d.error&&d.error.message)||'刪除失敗（'+res.status+'）');
   }
