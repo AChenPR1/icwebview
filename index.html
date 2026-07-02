@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Idel Casino圖庫 v2.5</title>
+<title>Idel Casino圖庫 v2.6</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -178,7 +178,7 @@
   <div class="topbar">
     <div class="topbar-logo">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="8" height="8" rx="2" fill="#7c6af7"/><rect x="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".5"/><rect x="10" y="10" width="8" height="8" rx="2" fill="#7c6af7" opacity=".3"/></svg>
-      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v2.5</span>
+      Idel Casino圖庫 <span style="font-size:11px;opacity:.5;font-weight:400">v2.6</span>
     </div>
     <div class="topbar-sep"></div>
     <div class="topbar-search">
@@ -326,11 +326,12 @@
 <script>
 // ── Config ──────────────────────────────────────────────────────────────────
 const API_KEY      = 'AIzaSyBuI7-G-XrR1fR0Md9c9XPXyZvh8SgBTtU';
-const CLIENT_ID    = '374989467269-n60hjs1kjgb3ts8bnbr6jk9vn5fhju6p.apps.googleusercontent.com';  // 填入 Google OAuth Client ID（用於建立資料夾）
+const SA_EMAIL     = 'playdevcoo@idelcasino.iam.gserviceaccount.com';
+const SA_KEY       = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDqpa0w0VFDIzY2\nxEkK9xsL3J11RUY7VWT97oZbKzEi4s/Jvm/XQSuE3xzm0W56ijeGoJfI3a/tUZ+g\n44Nwi9ijb/nFNuvV5rcNnPvUB+SqQ2dg9nAxwDHD78gZANORuGCH/mSjAovD3FEM\nchbjKq31DLPE5XKp33YHgXfxNUdWqF/hVv/EdSVzdxeq+6NYp6IUr5z1XHd14SbG\nRlVXu868C/Nk9kA3DpfYdM+Hfa2Q9EzDX7/FRpwMxedI2ZB76rV4vefglf7t8w67\ns3nJRKDDjXNw3D2Q0P5lBrm246AJGhhVxonOAcMXG2Z12PpkagrQJs8+pxeTAy+O\nhar1aJrJAgMBAAECggEAF5UIB2h6BMfUqoNmneIAx1voPUF1kf/+kuC2gxIfsZRe\n8rUfc2A62fM8adwxgMJEW1TnfEn/ZNf3tYk4DAcaAi7+SLpA0HIMAqO80W3rpsr4\naE/MLcvVlI4UK6MgIDyKAxDnl1RprIkHYjtTHoiLDB43MPooYHczWwTBg63pmgVH\nuD8wT5bfP/mW3wp9GLIyTTTESV3tnvlaSxGfO4tYFVjYo5E0GwZpTibbkEzP0s5l\nVnauGq3ae/nTOEynjwap2tfGj3YwGQBzfQ9iZgH6Kw84sgJIm5Kjc59H05NPmWEf\nKZ3na/kQ00oTUeD3gxotWf+xB/jABrgSDbQ1egGOkwKBgQD8jHEcjFuPmXYwRHhP\nt7ftT34pt4ZdBWOxr+HEQYrO0Be7Qfids/KvfBCsEvRZct2Rphyew6ec22YTbMu5\nwyimclg0zUfR3JrGqXCXVHZi4viWOhar7KObMUsOWBUrCoZ/lFUll9ssdFcwOnFz\noZnYF8WgLJXjoY10YNjMZFr5BwKBgQDt2pr37LWk5jHYCvJngIxmatzbCBz/cydM\nJMvnRMVe9uXbu5wSK1ONi3kAfOXUAY02aDefHfUBBrmLmaxnXBH0iWARR90lu9+j\nNwPryeQi+shLkaT+Vus2/+7rBXHtKjxHjWqWkaoaopNyzwL2GArF53c9bPyLgzpt\nqovETafprwKBgHVusKH/uguZ5lUnYXJgEUxt7FJlnjre6K6VBDwH5g2owYA3eu2J\n4U0sOWxqG+kD+ndhcGl6vRO5CUv7CPhGAT70aIOU+NJi7C14WHxlr+7nb4QbWrNz\nA9iEIUx4NM+gw03LoZQreqS/LFOmuV51RF4xH5oNYV1Jn8b/yY+xEoQ9AoGAWZMv\nM1lA2xYaBVuyCIqf1V4/SHmYuhc64HEnHTSIBAiFbigMUcdhUvgInMdsolfnP2sm\nL1VP1JAcxlccV1yUInyt4jQnM7O6ODRa1KyWrxm03si9008WjAL8jiPh0MhMJUI7\ntvKqlhdN4jnVyqopPHi8LjTiMwQ7t9s3gbkhGF8CgYEAmBkqGVNHU1wNU/uthtk6\nqohKAbG8o65WwLXgYSY/OEAgHETz54noYBYy7Oll5mQZoqCN4JhZubw1ZYa1apqy\naQp4iFXQAO8K9l6gsef0zVsSgK1QvowCA2BAb+FsULvhVG0BcEqxCnVif5AJMxaK\niX4yv3UfgX+uJpo+fuXj/wc=\n-----END PRIVATE KEY-----\n';
 const GAPI         = 'https://www.googleapis.com/drive/v3';
 const ROOT_ID      = '1oJ7TT2--PgrH1h8TPsr_pShWHtY0HUXB';
 const ROOT_NAME    = 'Idel Casino';
-const VERSION      = 'v2.5';
+const VERSION      = 'v2.6';
 
 // ── State ────────────────────────────────────────────────────────────────────
 let categories  = [];
@@ -428,18 +429,6 @@ function loadSaved(){
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 (async function init(){
-  // OAuth callback popup — detected by access_token in hash + waiting flag
-  if(location.hash.includes('access_token')&&localStorage.getItem('_oat_wait')){
-    const p=new URLSearchParams(location.hash.slice(1));
-    const tok=p.get('access_token');
-    const exp=parseInt(p.get('expires_in')||'3600');
-    if(tok){
-      localStorage.setItem('_oat',tok);
-      localStorage.setItem('_oat_exp', String(Date.now()+(exp-60)*1000));
-    }
-    window.close();
-    return;
-  }
   if(localStorage.getItem('icEdit')==='1'){ isEditMode=true; }
   document.body.classList.toggle('view-mode', !isEditMode);
   const _ab=document.getElementById('authBtn');
@@ -487,68 +476,48 @@ async function fetchImages(folderId){
 }
 
 // ── Drive API (write — needs OAuth) ──────────────────────────────────────────
-function _oauthPopup(prompt, resolve, reject){
-  localStorage.removeItem('_oat');
-  localStorage.setItem('_oat_wait','1');
-  const redirectUri=location.origin+location.pathname;
-  const silent=prompt==='none';
-  const w=window.open(
-    `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=https://www.googleapis.com/auth/drive&prompt=${prompt}`,
-    silent?'oauth_silent':'oauth',
-    silent?'width=1,height=1,left=-9999,top=-9999':'width=500,height=600'
-  );
-  const deadline=Date.now()+(silent?6000:300000);
-  const timer=setInterval(()=>{
-    const tok=localStorage.getItem('_oat');
-    if(tok){
-      clearInterval(timer);
-      localStorage.removeItem('_oat');
-      localStorage.removeItem('_oat_wait');
-      localStorage.setItem('_oat_tok',tok);
-      accessToken=tok;
-      resolve(tok);
-      return;
-    }
-    const closed=(()=>{ try{ return w&&w.closed; }catch(e){ return Date.now()>deadline; } })();
-    if(closed||Date.now()>deadline){
-      clearInterval(timer);
-      localStorage.removeItem('_oat_wait');
-      try{ w&&w.close(); }catch(e){}
-      reject(new Error(silent?'silent_fail':'授權視窗已關閉'));
-    }
-  },300);
-}
-
 let _refreshTimer = null;
-function scheduleTokenRefresh(){
+function _scheduleTokenRefresh(){
   if(_refreshTimer){ clearTimeout(_refreshTimer); _refreshTimer=null; }
-  const exp=parseInt(localStorage.getItem('_oat_exp')||'0');
-  const delay=exp-Date.now()-5*60*1000; // 到期前 5 分鐘
-  if(delay<10000) return; // 太近或已過期，不排程
+  const exp=parseInt(localStorage.getItem('_sa_exp')||'0');
+  const delay=exp-Date.now()-5*60*1000;
+  if(delay<10000) return;
   _refreshTimer=setTimeout(async()=>{
     _refreshTimer=null;
-    try{
-      await new Promise((res,rej)=>_oauthPopup('none',res,rej));
-      scheduleTokenRefresh(); // 成功後排下一次
-    }catch(e){ /* 靜默失敗，下次操作時再請使用者登入 */ }
+    accessToken=null;
+    try{ await ensureAccessToken(); }catch(e){}
   }, delay);
 }
 
 async function ensureAccessToken(){
   if(accessToken) return accessToken;
-  // 檢查 localStorage 中的未到期 token
-  const stored=localStorage.getItem('_oat_tok');
-  const exp=parseInt(localStorage.getItem('_oat_exp')||'0');
-  if(stored&&Date.now()<exp){ accessToken=stored; scheduleTokenRefresh(); return accessToken; }
-  if(!CLIENT_ID) throw new Error('尚未設定 OAuth Client ID');
-  // 先嘗試靜默刷新（不跳視窗）
-  try{
-    await new Promise((res,rej)=>_oauthPopup('none',res,rej));
-    scheduleTokenRefresh();
-    return accessToken;
-  }catch(e){}
-  // 靜默失敗 → 顯示正常授權視窗
-  return new Promise((resolve,reject)=>_oauthPopup('select_account',resolve,reject).then(()=>scheduleTokenRefresh()));
+  const cached=localStorage.getItem('_sa_tok');
+  const exp=parseInt(localStorage.getItem('_sa_exp')||'0');
+  if(cached&&Date.now()<exp){ accessToken=cached; _scheduleTokenRefresh(); return accessToken; }
+  // 用服務帳號金鑰產生 JWT，換取 access token
+  const now=Math.floor(Date.now()/1000);
+  const b64url=obj=>btoa(JSON.stringify(obj)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const sigInput=b64url({alg:'RS256',typ:'JWT'})+'.'+b64url({
+    iss:SA_EMAIL, scope:'https://www.googleapis.com/auth/drive',
+    aud:'https://oauth2.googleapis.com/token', exp:now+3600, iat:now
+  });
+  const pem=SA_KEY.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g,'');
+  const der=Uint8Array.from(atob(pem),c=>c.charCodeAt(0));
+  const key=await crypto.subtle.importKey('pkcs8',der.buffer,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+  const sig=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(sigInput));
+  const sigB64=btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const res=await fetch('https://oauth2.googleapis.com/token',{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion='+sigInput+'.'+sigB64
+  });
+  const d=await res.json();
+  if(d.error) throw new Error(d.error_description||d.error);
+  accessToken=d.access_token;
+  localStorage.setItem('_sa_tok',accessToken);
+  localStorage.setItem('_sa_exp',String(Date.now()+(d.expires_in-60)*1000));
+  _scheduleTokenRefresh();
+  return accessToken;
 }
 
 async function createDriveFolder(name, parentId){
