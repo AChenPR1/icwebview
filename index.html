@@ -1042,6 +1042,7 @@ async function processUploadFiles(files){
   });
 
   let succeeded = 0;
+  const errors = [];
   try { await ensureAccessToken(); } catch(e){ alert('授權失敗：'+e.message); return; }
 
   await Promise.all(imgFiles.map(async file => {
@@ -1066,15 +1067,18 @@ async function processUploadFiles(files){
       appendCardToGrid(newFile, currentFiles.length-1);
       succeeded++;
     } catch(e) {
+      errors.push(file.name + ': ' + e.message);
       const st = document.getElementById('st-'+rowId);
-      if(st){ st.textContent='✗'; st.style.color='var(--danger)'; st.title=e.message; }
+      if(st){ st.textContent='✗ '+e.message; st.style.color='var(--danger)'; }
     }
   }));
+
+  if(errors.length) alert('上傳失敗：\n' + errors.join('\n'));
 
   setTimeout(()=>{
     progress.innerHTML='';
     document.getElementById('uploadHint').style.display='';
-  }, 3000);
+  }, errors.length ? 8000 : 3000);
 }
 
 function appendCardToGrid(f, i){
